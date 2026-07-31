@@ -5,13 +5,13 @@ import scala.util.Properties
 inThisBuild(Seq(
   organization := "com.typesafe",
   licenses := Seq(License.Apache2),
-  homepage := Some(url("http://github.com/lightbend-labs/mima")),
+  homepage := Some(url("http://github.com/scala-garden/mima")),
   developers := List(
     Developer("mdotta", "Mirco Dotta", "@dotta", url("https://github.com/dotta")),
     Developer("jsuereth", "Josh Suereth", "@jsuereth", url("https://github.com/jsuereth")),
     Developer("dwijnand", "Dale Wijnand", "@dwijnand", url("https://github.com/dwijnand")),
   ),
-  scmInfo := Some(ScmInfo(url("https://github.com/lightbend-labs/mima"), "scm:git:git@github.com:lightbend-labs/mima.git")),
+  scmInfo := Some(ScmInfo(url("https://github.com/scala-garden/mima"), "scm:git:git@github.com:scala-garden/mima.git")),
   versionScheme := Some("early-semver"),
 ))
 

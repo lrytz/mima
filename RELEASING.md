@@ -20,12 +20,12 @@
 * [ ] [Find and merge][prs/list] your update PR.
 * [ ] [Create a new release][releases/new] for the release, allowing GitHub to generate draft release notes automatically.
 
-[issues/new]:    https://github.com/lightbend-labs/mima/issues/new
-[prs/list]:      https://github.com/lightbend-labs/mima/pulls
-[releases/new]:  https://github.com/lightbend-labs/mima/releases/new
-[wf/release]:    https://github.com/lightbend-labs/mima/actions/workflows/release.yml
-[RELEASING.md]:  https://raw.githubusercontent.com/lightbend-labs/mima/main/RELEASING.md
+[issues/new]:    https://github.com/scala-garden/mima/issues/new
+[prs/list]:      https://github.com/scala-garden/mima/pulls
+[releases/new]:  https://github.com/scala-garden/mima/releases/new
+[wf/release]:    https://github.com/scala-garden/mima/actions/workflows/release.yml
+[RELEASING.md]:  https://raw.githubusercontent.com/scala-garden/mima/main/RELEASING.md
 [repo1/list]:    https://repo1.maven.org/maven2/com/typesafe/mima-core_2.12/
-[wf/ci]:         https://github.com/lightbend-labs/mima/actions/workflows/ci.yml
+[wf/ci]:         https://github.com/scala-garden/mima/actions/workflows/ci.yml
 
 You are done!
