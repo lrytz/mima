@@ -87,21 +87,22 @@ sealed abstract class PackageInfo {
   }
 
   final lazy val accessibleClasses: Set[ClassInfo] = {
-    @tailrec def loop(found: Set[ClassInfo], prefix: Set[ClassInfo]): Set[ClassInfo] = {
-      val accessibleClasses = classes.valuesIterator.filter(isAccessible(_, prefix)).toSet
-      if (accessibleClasses.isEmpty) found
-      else loop(accessibleClasses ++ found, accessibleClasses)
+    val found = Set.newBuilder[ClassInfo]
+
+    val allAccessibleClasses = classes.valuesIterator.filter { clazz =>
+      clazz.isPublic && !clazz.isLocalClass && !clazz.isSynthetic
+    }.toSet
+
+    @tailrec def loop(isReachable: ClassInfo => Boolean): Set[ClassInfo] = {
+      val reachableClasses = allAccessibleClasses.filter(isReachable)
+      if (reachableClasses.isEmpty) found.result()
+      else {
+        found ++= reachableClasses
+        loop(clazz => reachableClasses.exists(_.innerClasses.contains(clazz.bytecodeName)))
+      }
     }
 
-    def isAccessible(clazz: ClassInfo, prefix: Set[ClassInfo]) =
-      clazz.isPublic && !clazz.isLocalClass && !clazz.isSynthetic && isReachable(clazz, prefix)
-
-    def isReachable(clazz: ClassInfo, prefix: Set[ClassInfo]) = {
-      if (prefix.isEmpty) clazz.isTopLevel && !clazz.decodedName.contains("$$")
-      else prefix.exists(_.innerClasses.contains(clazz.bytecodeName))
-    }
-
-    loop(Set.empty, Set.empty)
+    loop(clazz => clazz.isTopLevel && !clazz.decodedName.contains("$$"))
   }
 
   // Used to make sure trait classes have their impl class field set
