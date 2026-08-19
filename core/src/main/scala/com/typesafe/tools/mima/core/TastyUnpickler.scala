@@ -78,9 +78,23 @@ object TastyUnpickler {
   }.traverse(tree)
 
   def copyPrivateFlags(tree: Tree, pkgInfo: PackageInfo): Unit = new ClassTraverser(pkgInfo) {
+    // an object without a companion class also gets a class of static forwarders, and the object's
+    // own visibility is all that class carries
+    private val pickledClasses = {
+      val builder = Set.newBuilder[ClassInfo]
+      new ClassTraverser(pkgInfo) {
+        override def forEachClass(clsDef: ClsDef, cls: ClassInfo): Unit =
+          if (!cls.isModuleClass) builder += cls
+      }.traverse(tree)
+      builder.result()
+    }
+
     override def forEachClass(clsDef: ClsDef, cls: ClassInfo): Unit = {
       if (clsDef.flags.isSealed) cls._sealed = true
-      clsDef.privateWithin.foreach(_ => cls.module._scopedPrivate = true)
+      if (clsDef.privateWithin.isDefined) {
+        cls._scopedPrivate = true
+        if (cls.isModuleClass && !pickledClasses(cls.module)) cls.module._scopedPrivate = true
+      }
     }
 
     override def traverseTemplate(tmpl: Template): Unit = {

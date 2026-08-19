@@ -204,11 +204,18 @@ object MimaUnpickler {
 
     for (sym <- defnSyms) classes(sym) = symbolToClass(sym)
 
+    // an object without a companion class also gets a class of static forwarders, and the object's
+    // own visibility is all that class carries
+    val pickledClasses = defnSyms.filterNot(_.isModuleOrModuleClass).map(classes).toSet
+
     for (clsSym <- defnSyms) {
       val cls = classes(clsSym)
       if (cls != NoClass) {
         if (clsSym.isSealed) cls._sealed = true
-        if (clsSym.isScopedPrivate) cls.module._scopedPrivate = true
+        if (clsSym.isScopedPrivate) {
+          cls._scopedPrivate = true
+          if (clsSym.isModuleOrModuleClass && !pickledClasses(cls.module)) cls.module._scopedPrivate = true
+        }
       }
       doMethods(cls, methSyms.filter(_.owner == clsSym).toList)
     }
