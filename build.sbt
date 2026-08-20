@@ -23,7 +23,8 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
   scalacOptions ++= compilerOptions(scalaVersion.value),
 )
 
-def java8or17[T](if8: => T, if17: => T): T = if (Properties.isJavaAtLeast("17")) if17 else if8
+val isJdk17inCI = Properties.isJavaAtLeast("17") && sys.env.contains("CI") // to split released artifacts by JDK
+def skipIfJdk17inCI[T](obj: => Seq[T]): Seq[T] = if (isJdk17inCI) Seq.empty else obj
 
 def compilerOptions(scalaVersion: String): Seq[String] =
   Seq(
@@ -62,7 +63,7 @@ val munit = Def.setting("org.scalameta" %%% "munit" % "1.3.3")
 
 val core = crossProject(JVMPlatform, NativePlatform).crossType(CrossType.Pure).settings(commonSettings).settings(
   name := "mima-core",
-  crossScalaVersions := java8or17(Seq(scala212, scala213, scala3_3), Nil),
+  crossScalaVersions := skipIfJdk17inCI(Seq(scala212, scala213, scala3_3)),
   libraryDependencies += munit.value % Test,
   MimaSettings.mimaSettings,
   apiMappings ++= {
@@ -82,7 +83,7 @@ val cli = crossProject(JVMPlatform)
   .settings(commonSettings)
   .settings(
     name := "mima-cli",
-    crossScalaVersions := java8or17(Seq(scala212, scala213, scala3_3), Nil),
+    crossScalaVersions := skipIfJdk17inCI(Seq(scala212, scala213, scala3_3)),
     libraryDependencies += munit.value % Test,
     mimaFailOnNoPrevious := false,
   )
@@ -90,7 +91,7 @@ val cli = crossProject(JVMPlatform)
 
 val sbtplugin = project.enablePlugins(SbtPlugin).dependsOn(core.jvm).settings(commonSettings).settings(
   name := "sbt-mima-plugin",
-  crossScalaVersions := java8or17(Seq(scala212), Seq(scala3_8)),
+  crossScalaVersions := { if (isJdk17inCI) Seq(scala3_8) else Seq(scala212) },
   (pluginCrossBuild / sbtVersion) := {
     scalaBinaryVersion.value match {
       case "2.12" => "1.5.8"
@@ -109,7 +110,7 @@ val functionalTests = Project("functional-tests", file("functional-tests"))
   .dependsOn(core.jvm)
   .settings(commonSettings)
   .settings(
-    crossScalaVersions := java8or17(Seq(scala212, scala213), Nil),
+    crossScalaVersions := skipIfJdk17inCI(Seq(scala212, scala213)),
     publish / skip := true,
     libraryDependencies += "io.get-coursier" %% "coursier" % "2.1.24",
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
@@ -123,7 +124,7 @@ val integrationTests = Project("integration-tests", file("integration-tests"))
   .dependsOn(functionalTests % "compile->compile")
   .settings(commonSettings)
   .settings(
-    crossScalaVersions := java8or17(Seq(scala212, scala213), Nil),
+    crossScalaVersions := skipIfJdk17inCI(Seq(scala212, scala213)),
     publish / skip := true,
     libraryDependencies += munit.value,
     Test / unmanagedSourceDirectories := Seq((functionalTests / baseDirectory).value / "src" / "it" / "scala"),
