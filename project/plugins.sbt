@@ -6,7 +6,7 @@ scalacOptions ++= Seq(
   "-Ywarn-unused:_,-imports",
 )
 
-addSbtPlugin("com.github.sbt" % "sbt-ci-release"  % "1.12.0")
+addSbtPlugin("com.github.sbt" % "sbt-ci-release"  % "1.12.1")
 addSbtPlugin("com.typesafe"   % "sbt-mima-plugin" % "1.1.6")
 
 addSbtPlugin("org.portable-scala" % "sbt-scala-native-crossproject" % "1.3.2")
