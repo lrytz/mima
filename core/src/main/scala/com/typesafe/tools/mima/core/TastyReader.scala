@@ -25,7 +25,7 @@ final class TastyReader(val bytes: Array[Byte], start: Int, end: Int, val base: 
   def readEnd(): Addr        = addr(readNat() + bp) // Read a length number and return the absolute end address implied by it, given as (address following length field) + (length-value-read)
   def goto(addr: Addr): Unit = bp = index(addr)     // Set read position to the one pointed to by `addr`
 
-  def readByte(): Int        = { val b = nextByte; bp += 1; b } // Read a byte of data
+  def readByte(): Int = { val b = nextByte; bp += 1; b } // Read a byte of data
 
   /** Read the next `n` bytes of `data`. */
   def readBytes(n: Int): Array[Byte] = {

@@ -19,9 +19,9 @@ package com.typesafe.tools.mima.core
 object ByteCodecs {
   /** Map 0xC0 0x80 to 0x00, then subtract 1 from each element. In-place. */
   def regenerateZero(src: Array[Byte]): Int = {
-    var i = 0
+    var i      = 0
     val srclen = src.length
-    var j = 0
+    var j      = 0
     while (i < srclen) {
       val in: Int = src(i) & 0xff
       if (in == 0xc0 && (src(i + 1) & 0xff) == 0x80) {
@@ -40,8 +40,8 @@ object ByteCodecs {
   }
 
   def decode7to8(src: Array[Byte], srclen: Int): Int = {
-    var i = 0
-    var j = 0
+    var i      = 0
+    var j      = 0
     val dstlen = (srclen * 7 + 7) / 8
     while (i + 7 < srclen) {
       var out: Int = src(i).toInt

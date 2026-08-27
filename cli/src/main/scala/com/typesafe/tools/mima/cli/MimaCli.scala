@@ -76,7 +76,7 @@ object Main {
   @tailrec
   private def parseArgs(remaining: List[String], current: Main): Main =
     remaining match {
-      case Nil => current
+      case Nil                                      => current
       case ("-cp" | "--classpath") :: cpStr :: rest =>
         parseArgs(
           rest,

@@ -5,12 +5,11 @@ object MemberInfo {
 }
 
 sealed abstract class MemberInfo(val owner: ClassInfo, val bytecodeName: String, val flags: Int, val descriptor: String)
-    extends InfoLike
-{
+    extends InfoLike {
   final var isDeprecated: Boolean  = false
   final var signature: Signature   = Signature.none // Includes generics. 'descriptor' is the erased version.
   final var scopedPrivate: Boolean = false
-  final var classPrivate: Boolean = false
+  final var classPrivate: Boolean  = false
 
   def nonAccessible: Boolean
 
@@ -29,16 +28,14 @@ sealed abstract class MemberInfo(val owner: ClassInfo, val bytecodeName: String,
 }
 
 private[mima] final class FieldInfo(owner: ClassInfo, bytecodeName: String, flags: Int, descriptor: String)
-    extends MemberInfo(owner, bytecodeName, flags, descriptor)
-{
+    extends MemberInfo(owner, bytecodeName, flags, descriptor) {
   def nonAccessible: Boolean = !isPublic || isSynthetic || hasSyntheticName
   def fieldString: String    = s"${staticPrefix}field $decodedName in ${owner.classString}"
   override def toString      = s"field $bytecodeName: $descriptor"
 }
 
 private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, flags: Int, descriptor: String)
-    extends MemberInfo(owner, bytecodeName, flags, descriptor)
-{
+    extends MemberInfo(owner, bytecodeName, flags, descriptor) {
   final var _annotations: List[AnnotInfo] = Nil
   final def annotations: List[AnnotInfo]  = _annotations
 
@@ -81,7 +78,7 @@ private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, fla
   }
   def nonAccessible: Boolean = {
     !isPublic || isScopedPrivate || isClassPrivate || isSynthetic ||
-      (hasSyntheticName && !(isExtensionMethod || isDefaultGetter || isTraitInit))
+    (hasSyntheticName && !(isExtensionMethod || isDefaultGetter || isTraitInit))
   }
   def isScopedPrivate: Boolean = scopedPrivate
 

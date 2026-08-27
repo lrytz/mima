@@ -8,7 +8,8 @@ private[analyze] object FieldChecker {
   }
 
   private def check1(oldfld: FieldInfo, newclazz: ClassInfo): Option[Problem] = {
-    if (oldfld.nonAccessible) None else {
+    if (oldfld.nonAccessible) None
+    else {
       val newflds = newclazz.lookupClassFields(oldfld)
       if (newflds.hasNext) {
         val newfld = newflds.next()
@@ -17,8 +18,7 @@ private[analyze] object FieldChecker {
         else if (oldfld.isStatic && !newfld.isStatic) Some(StaticVirtualMemberProblem(oldfld))
         else if (!oldfld.isStatic && newfld.isStatic) Some(VirtualStaticMemberProblem(oldfld))
         else None
-      }
-      else Some(MissingFieldProblem(oldfld))
+      } else Some(MissingFieldProblem(oldfld))
     }
   }
 }

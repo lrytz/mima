@@ -64,16 +64,16 @@ final case class CyclicTypeReferenceProblem(clazz: ClassInfo)                   
 final case class MissingTypesProblem(newclazz: ClassInfo, missing: Iterable[ClassInfo])   extends TemplateProblem(newclazz)
 
 // Member problems
-sealed abstract class MemberProblem(val ref: MemberInfo)                                      extends Problem with MemberRef
+sealed abstract class MemberProblem(val ref: MemberInfo) extends Problem with MemberRef
 
 /// Field problems
-final case class MissingFieldProblem(oldfld: FieldInfo)                                       extends MemberProblem(oldfld)
-final case class InaccessibleFieldProblem(newfld: FieldInfo)                                  extends MemberProblem(newfld)
-final case class IncompatibleFieldTypeProblem(oldfld: FieldInfo, newfld: FieldInfo)           extends MemberProblem(oldfld)
+final case class MissingFieldProblem(oldfld: FieldInfo)                             extends MemberProblem(oldfld)
+final case class InaccessibleFieldProblem(newfld: FieldInfo)                        extends MemberProblem(newfld)
+final case class IncompatibleFieldTypeProblem(oldfld: FieldInfo, newfld: FieldInfo) extends MemberProblem(oldfld)
 
 /// Member-generic problems
-final case class StaticVirtualMemberProblem(oldmemb: MemberInfo)                              extends AbstractMethodProblem(oldmemb)
-final case class VirtualStaticMemberProblem(oldmemb: MemberInfo)                              extends AbstractMethodProblem(oldmemb)
+final case class StaticVirtualMemberProblem(oldmemb: MemberInfo) extends AbstractMethodProblem(oldmemb)
+final case class VirtualStaticMemberProblem(oldmemb: MemberInfo) extends AbstractMethodProblem(oldmemb)
 
 /// Method problems
 sealed abstract class MissingMethodProblem(meth: MethodInfo)                                  extends MemberProblem(meth)

@@ -45,8 +45,8 @@ case class ProblemFormatter(
       info.fullName
 
   private def bytecodeFullName(info: MemberInfo): String = {
-    val pkg = info.owner.owner.fullName.replace('.', '/')
-    val clsName = info.owner.bytecodeName
+    val pkg        = info.owner.owner.fullName.replace('.', '/')
+    val clsName    = info.owner.bytecodeName
     val memberName = info.bytecodeName match {
       case "<init>" => "\"<init>\""
       case name     => name

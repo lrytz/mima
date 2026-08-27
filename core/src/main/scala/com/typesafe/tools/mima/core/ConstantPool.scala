@@ -7,7 +7,7 @@ import ClassfileConstants._
 private[core] object ConstantPool {
   def parseNew(definitions: Definitions, in: BufferReader): ConstantPool = {
     val starts = new Array[Int](in.nextChar)
-    var i = 1
+    var i      = 1
     while (i < starts.length) {
       starts(i) = in.bp
       i += 1
@@ -36,8 +36,7 @@ private[core] object ConstantPool {
   private def abort(msg: String): Nothing = throw new RuntimeException(msg)
 }
 
-private[core]
-final class ConstantPool private (definitions: Definitions, in: BytesReader, starts: Array[Int]) {
+private[core] final class ConstantPool private (definitions: Definitions, in: BytesReader, starts: Array[Int]) {
   import ConstantPool._, ClassInfo.ObjectClass
 
   def file: AbsFile = in.file
@@ -112,7 +111,7 @@ final class ConstantPool private (definitions: Definitions, in: BytesReader, sta
 
   private def firstExpecting(index: Int, expectedTag: Int) = {
     val start = starts(index)
-    val tag = in.getByte(start).toInt
+    val tag   = in.getByte(start).toInt
     if (tag == expectedTag) start + 1
     else errorBadTag(tag, start)
   }

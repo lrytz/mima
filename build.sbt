@@ -32,20 +32,20 @@ def compilerOptions(scalaVersion: String): Seq[String] =
     "-feature",
     "-Wconf:cat=deprecation&msg=Stream|JavaConverters:s",
   ) ++
-  (CrossVersion.partialVersion(scalaVersion) match {
-    case Some((2, _)) => Seq(
-      "-Xlint",
-      // these are too annoying when crossbuilding
-      "-Wconf:cat=unused-nowarn:s",
-    )
-    case _ => Seq()
-  }) ++
-  (CrossVersion.partialVersion(scalaVersion) match {
-    case Some((2, 12)) => Seq("-Xsource:3")
-    case Some((2, 13)) => Seq("-Xsource:3-cross")
+    (CrossVersion.partialVersion(scalaVersion) match {
+      case Some((2, _)) => Seq(
+          "-Xlint",
+          // these are too annoying when crossbuilding
+          "-Wconf:cat=unused-nowarn:s",
+        )
+      case _ => Seq()
+    }) ++
+    (CrossVersion.partialVersion(scalaVersion) match {
+      case Some((2, 12)) => Seq("-Xsource:3")
+      case Some((2, 13)) => Seq("-Xsource:3-cross")
 
-    case _ => Seq()
-  })
+      case _ => Seq()
+    })
 
 // Keep in sync with TestCli
 val scala212 = "2.12.21"
@@ -73,8 +73,9 @@ val core = crossProject(JVMPlatform, NativePlatform).crossType(CrossType.Pure).s
     // from https://stackoverflow.com/a/31322970/463761
     sys.props.get("sun.boot.class.path").toList
       .flatMap(_.split(java.io.File.pathSeparator))
-      .collectFirst { case str if str.endsWith(java.io.File.separator + "rt.jar") =>
-        file(str) -> url("http://docs.oracle.com/javase/8/docs/api/index.html")
+      .collectFirst {
+        case str if str.endsWith(java.io.File.separator + "rt.jar") =>
+          file(str) -> url("http://docs.oracle.com/javase/8/docs/api/index.html")
       }
       .toMap
   },

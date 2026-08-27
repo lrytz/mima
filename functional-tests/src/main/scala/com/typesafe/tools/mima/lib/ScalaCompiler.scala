@@ -21,14 +21,14 @@ final class ScalaCompiler(val version: String) {
   def compile(args: Seq[String]): Try[Unit] = {
     import scala.language.reflectiveCalls
     val clsName = if (isScala3) "dotty.tools.dotc.Main$" else "scala.tools.nsc.Main$"
-    val cls = classLoader.loadClass(clsName)
+    val cls     = classLoader.loadClass(clsName)
     type Main     = { def process(args: Array[String]): Any; def reporter: Reporter }
     type Reporter = { def hasErrors: Boolean }
     val m = cls.getField("MODULE$").get(null).asInstanceOf[Main]
     Try {
       val success = m.process(args.toArray) match {
         case b: Boolean => b
-        case null       => !m.reporter.hasErrors // nsc 2.11
+        case null       => !m.reporter.hasErrors               // nsc 2.11
         case x          => !x.asInstanceOf[Reporter].hasErrors // dotc
       }
       if (success) Success(()) else Failure(new Exception("scalac failed"))

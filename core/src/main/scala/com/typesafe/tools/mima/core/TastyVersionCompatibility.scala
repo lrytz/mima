@@ -38,8 +38,8 @@ object TastyVersionCompatibility {
    */
   def isVersionCompatible(fileMajor: Int, fileMinor: Int, fileExperimental: Int): Boolean = (
     fileMajor == MajorVersion &&
-      (  fileMinor == MinorVersion && fileExperimental == ExperimentalVersion // full equality
-      || fileMinor <  MinorVersion && fileExperimental == 0 // stable backwards compatibility
-    )
+      (fileMinor == MinorVersion && fileExperimental == ExperimentalVersion // full equality
+        || fileMinor < MinorVersion && fileExperimental == 0                // stable backwards compatibility
+      )
   )
 }

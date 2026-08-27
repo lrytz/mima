@@ -15,8 +15,8 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
 
     clazz._superClass = parseSuperClass(clazz, flags)
     clazz._interfaces = parseInterfaces()
-    clazz._fields     = parseMembers[FieldInfo](clazz)
-    clazz._methods    = parseMembers[MethodInfo](clazz)
+    clazz._fields = parseMembers[FieldInfo](clazz)
+    clazz._methods = parseMembers[MethodInfo](clazz)
     parseClassAttributes(clazz)
   }
 
@@ -31,7 +31,7 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
     List.fill(in.nextChar)(pool.getSuperClass(in.nextChar))
   }
 
-  private def parseMembers[A <: MemberInfo : MkMember](clazz: ClassInfo): Members[A] = {
+  private def parseMembers[A <: MemberInfo: MkMember](clazz: ClassInfo): Members[A] = {
     val members = for {
       _ <- 0.until(in.nextChar).iterator
       flags = in.nextChar
@@ -41,7 +41,7 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
     new Members(members.toList)
   }
 
-  private def parseMember[A <: MemberInfo : MkMember](clazz: ClassInfo, flags: Int): A = {
+  private def parseMember[A <: MemberInfo: MkMember](clazz: ClassInfo, flags: Int): A = {
     val name       = pool.getName(in.nextChar)
     val descriptor = pool.getExternalName(in.nextChar)
     val member     = implicitly[MkMember[A]].make(clazz, name, flags, descriptor)
@@ -50,11 +50,11 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
   }
 
   private def parseClassAttributes(clazz: ClassInfo) = {
-    var isScala = false
+    var isScala           = false
     var runtimeAnnotStart = -1
     parseAttributes {
       case RuntimeAnnotationATTR => runtimeAnnotStart = in.bp
-      case ScalaSignatureATTR    => isScala    = true
+      case ScalaSignatureATTR    => isScala = true
       case EnclosingMethodATTR   => clazz._isLocalClass = true
       case InnerClassesATTR      => clazz._innerClasses = parseInnerClasses(clazz)
       case TASTYATTR             => parseTasty(clazz)
@@ -96,7 +96,7 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
   }
 
   private def parsePickle(clazz: ClassInfo) = {
-    def parseScalaSigBytes()     = {
+    def parseScalaSigBytes() = {
       in.acceptByte(STRING_TAG, s" for ${clazz.description}")
       pool.getBytes(in.nextChar)
     }
@@ -117,21 +117,21 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
     }
 
     def skipAnnotArg(): Unit = in.nextByte match {
-      case   BOOL_TAG |   BYTE_TAG => in.skip(2)
-      case   CHAR_TAG |  SHORT_TAG => in.skip(2)
-      case    INT_TAG |   LONG_TAG => in.skip(2)
-      case  FLOAT_TAG | DOUBLE_TAG => in.skip(2)
-      case STRING_TAG |  CLASS_TAG => in.skip(2)
-      case                ENUM_TAG => in.skip(4)
-      case               ARRAY_TAG => for (_ <- 0 until in.nextChar) skipAnnotArg()
+      case BOOL_TAG | BYTE_TAG    => in.skip(2)
+      case CHAR_TAG | SHORT_TAG   => in.skip(2)
+      case INT_TAG | LONG_TAG     => in.skip(2)
+      case FLOAT_TAG | DOUBLE_TAG => in.skip(2)
+      case STRING_TAG | CLASS_TAG => in.skip(2)
+      case ENUM_TAG               => in.skip(4)
+      case ARRAY_TAG              => for (_ <- 0 until in.nextChar) skipAnnotArg()
       case ANNOTATION_TAG         => in.skip(2) /* type */; skipAnnotArgs()
     }
 
     def skipAnnotArgs() = for (_ <- 0 until in.nextChar) { in.skip(2); skipAnnotArg() }
 
     val numAnnots = in.nextChar
-    var i = 0
-    var bytes = new Array[Byte](0)
+    var i         = 0
+    var bytes     = new Array[Byte](0)
     while (i < numAnnots && bytes.length == 0) {
       pool.getExternalName(in.nextChar) match {
         case ScalaSignatureAnnot     => checkScalaSigAnnotArg(); bytes = parseScalaSigBytes()
@@ -166,7 +166,7 @@ object ClassfileParser {
   private[core] def parseInPlace(clazz: ClassInfo, file: AbsFile): Unit = {
     val in = new BufferReader(file)
     parseHeader(in, file)
-    val pool = ConstantPool.parseNew(clazz.owner.definitions, in)
+    val pool   = ConstantPool.parseNew(clazz.owner.definitions, in)
     val parser = new ClassfileParser(in, pool)
     parser.parseClass(clazz)
   }
@@ -187,7 +187,7 @@ object ClassfileParser {
     if (magic != JAVA_MAGIC)
       throw new IOException(
         s"class file '$file' has wrong magic number 0x${magic.toHexString}, " +
-            s"should be 0x${JAVA_MAGIC.toHexString}")
+          s"should be 0x${JAVA_MAGIC.toHexString}")
     in.skip(2) // minorVersion
     in.skip(2) // majorVersion
   }

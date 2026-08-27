@@ -4,10 +4,10 @@ final class SignatureSpec extends munit.FunSuite {
   val promiseSig =
     "Lscala/concurrent/Promise<" +
       "Lscala/Function1<" +
-        "Lscala/concurrent/duration/FiniteDuration;" +
-        "Lscala/concurrent/Future<Lakka/http/scaladsl/Http$HttpTerminated;>;" +
+      "Lscala/concurrent/duration/FiniteDuration;" +
+      "Lscala/concurrent/Future<Lakka/http/scaladsl/Http$HttpTerminated;>;" +
       ">;" +
-    ">;"
+      ">;"
 
   val `signature_in_2.12.8` = Signature(s"(Lakka/http/impl/engine/server/GracefulTerminatorStage;$promiseSig)V")
   val `signature_in_2.12.9` = Signature(s"($promiseSig)V")

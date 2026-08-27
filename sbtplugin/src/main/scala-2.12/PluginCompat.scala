@@ -13,7 +13,7 @@ object PluginCompat {
   }
 
   // Used to differentiate unset mimaPreviousArtifacts from empty mimaPreviousArtifacts
-  private[plugin] object NoPreviousArtifacts extends EmptySet[ModuleID]
+  private[plugin] object NoPreviousArtifacts  extends EmptySet[ModuleID]
   private[plugin] object NoPreviousClassfiles extends EmptyMap[ModuleID, File]
 
   private[plugin] sealed class EmptySet[A] extends Set[A] {

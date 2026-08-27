@@ -64,7 +64,7 @@ final class TestCase(val baseDir: Directory, val scalaCompiler: ScalaCompiler, v
     val sourceFiles = lsSrcs(srcDir, _.hasExtension("java"))
     if (sourceFiles.isEmpty) return Success(())
     val cpStr = ClassPath.join((scalaJars ++ cp.map(_.jfile)).map(_.getPath))
-    val opts = List("-classpath", cpStr, "-d", s"$out").asJava
+    val opts  = List("-classpath", cpStr, "-d", s"$out").asJava
     val units = sourceFiles.map { sf =>
       new SimpleJavaFileObject(new URI(s"string:///${sf.path}"), JavaFileObject.Kind.SOURCE) {
         override def getCharContent(ignoreEncodingErrors: Boolean): java.nio.CharBuffer =
@@ -125,12 +125,12 @@ final class TestCase(val baseDir: Directory, val scalaCompiler: ScalaCompiler, v
     val p211 = (p.parent / (s"${p.stripExtension}-2.11")).addExtension(p.extension).toFile
     val p212 = (p.parent / (s"${p.stripExtension}-2.12")).addExtension(p.extension).toFile
     val p213 = (p.parent / (s"${p.stripExtension}-2.13")).addExtension(p.extension).toFile
-    val p3   = (p.parent / (s"${p.stripExtension}-3"   )).addExtension(p.extension).toFile
+    val p3   = (p.parent / (s"${p.stripExtension}-3")).addExtension(p.extension).toFile
     scalaBinaryVersion match {
       case "2.11" => if (p211.exists) p211 else if (p212.exists) p212 else p
       case "2.12" => if (p212.exists) p212 else p
       case "2.13" => if (p213.exists) p213 else if (p212.exists) p212 else p
-      case "3"    => if (p3.exists)   p3   else p
+      case "3"    => if (p3.exists) p3 else p
       case _      => p
     }
   }
@@ -144,9 +144,9 @@ final class TestCase(val baseDir: Directory, val scalaCompiler: ScalaCompiler, v
 
   @tailrec private def rootCause(x: Throwable): Throwable = x match {
     case _: ExceptionInInitializerError |
-         _: java.lang.reflect.InvocationTargetException |
-         _: java.lang.reflect.UndeclaredThrowableException |
-         _: java.util.concurrent.ExecutionException
+        _: java.lang.reflect.InvocationTargetException |
+        _: java.lang.reflect.UndeclaredThrowableException |
+        _: java.util.concurrent.ExecutionException
         if x.getCause != null =>
       rootCause(x.getCause)
     case _ => x

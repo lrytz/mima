@@ -17,7 +17,8 @@ class Signature(private val signature: String) {
           sig
             .replace(s"<${from}:", s"<__${to}__:")
             .replace(s";${from}:", s";__${to}__:")
-            .replace(s"T${from};", s"__${to}__") }
+            .replace(s"T${from};", s"__${to}__")
+        }
     }
   }
 
@@ -38,8 +39,8 @@ class Signature(private val signature: String) {
 
   // Special case for scala#7975
   private def hasMatchingCtorSig(newer: String): Boolean =
-    newer.isEmpty || // ignore losing signature on constructors
-    signature.endsWith(newer.tail) // ignore losing the 1st (outer) param (.tail drops the leading '(')
+    newer.isEmpty ||                 // ignore losing signature on constructors
+      signature.endsWith(newer.tail) // ignore losing the 1st (outer) param (.tail drops the leading '(')
 
   // a method that takes no parameters and returns Object can have no signature
   override def toString = if (signature.isEmpty) "<missing>" else signature
@@ -64,8 +65,8 @@ object Signature {
     }
 
     def parseOne(in: String): (FormalTypeParameter, String) = {
-      val identifier = in.takeWhile(_ != ':')
-      val boundAndRest = in.dropWhile(_ != ':').drop(1)
+      val identifier    = in.takeWhile(_ != ':')
+      val boundAndRest  = in.dropWhile(_ != ':').drop(1)
       val (bound, rest) = splitBoundAndRest(boundAndRest)
       (FormalTypeParameter(identifier, bound), rest)
     }

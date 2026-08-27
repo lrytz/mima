@@ -25,10 +25,10 @@ object SbtMima {
     def checkBC = mimaLib.collectProblems(prev, curr, excludeAnnots)
     def checkFC = mimaLib.collectProblems(curr, prev, excludeAnnots)
     dir match {
-       case "backward" | "backwards" => (checkBC, Nil)
-       case "forward" | "forwards"   => (Nil, checkFC)
-       case "both"                   => (checkBC, checkFC)
-       case _                        => (Nil, Nil)
+      case "backward" | "backwards" => (checkBC, Nil)
+      case "forward" | "forwards"   => (Nil, checkFC)
+      case "both"                   => (checkBC, checkFC)
+      case _                        => (Nil, Nil)
     }
   }
 
@@ -135,7 +135,8 @@ object SbtMima {
         } {
           text match {
             case ExclusionPattern(className, target) =>
-              try filters += ProblemFilters.exclude(className, target) catch {
+              try filters += ProblemFilters.exclude(className, target)
+              catch {
                 case NonFatal(t) => failures += s"Error while parsing $file, line $line: ${t.getMessage}"
               }
             case _ => failures += s"Couldn't parse $file, line $line: '$text'"

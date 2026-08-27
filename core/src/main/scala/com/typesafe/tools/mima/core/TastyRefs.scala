@@ -3,8 +3,8 @@ package com.typesafe.tools.mima.core
 object TastyRefs {
   /** An address pointing to an index in a TASTy buffer's byte array */
   case class Addr(index: Int) extends AnyVal {
-    def - (delta: Int): Addr = Addr(index - delta)
-    def + (delta: Int): Addr = Addr(index + delta)
+    def -(delta: Int): Addr = Addr(index - delta)
+    def +(delta: Int): Addr = Addr(index + delta)
 
     def relativeTo(base: Addr): Addr = this - base.index - AddrWidth
 

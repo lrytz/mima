@@ -65,7 +65,7 @@ object MimaPlugin extends AutoPlugin {
 
   trait BinaryIssuesFinder {
     def runMima(prevClassFiles: Map[ModuleID, File], checkDirection: String)
-    : Iterator[(ModuleID, (List[Problem], List[Problem]))]
+        : Iterator[(ModuleID, (List[Problem], List[Problem]))]
   }
 
   val artifactsToClassfiles: Def.Initialize[Task[ArtifactsToClassfiles]] = Def.task {
