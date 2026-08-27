@@ -1,0 +1,2 @@
+mima reports what leaks out of the package-private class, and the app
+never touches it, so it runs.

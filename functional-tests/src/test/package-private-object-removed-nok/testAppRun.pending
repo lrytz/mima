@@ -1,0 +1,2 @@
+mima names both classfiles of the object, and the app runs, because Lib
+stopped calling O.bar.

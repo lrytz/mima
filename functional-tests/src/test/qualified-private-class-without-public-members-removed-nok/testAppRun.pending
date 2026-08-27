@@ -1,0 +1,2 @@
+Lib.use survives the removal, so the app runs; the report is for a client
+that held the leaked value.

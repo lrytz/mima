@@ -1,0 +1,2 @@
+class foo.O does not have a correspondent in new version
+object foo.O does not have a correspondent in new version

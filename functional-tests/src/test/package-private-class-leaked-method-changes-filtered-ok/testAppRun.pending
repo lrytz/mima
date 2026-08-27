@@ -1,0 +1,2 @@
+The filter drops the report, and the app still calls C.bar(Int) through
+the value Lib.go hands it, so it dies.
