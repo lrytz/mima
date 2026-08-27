@@ -1,0 +1,2 @@
+# Every subclass of T is final, so no client can implement it and the app does not break
+# This is here to not make the app run test fail

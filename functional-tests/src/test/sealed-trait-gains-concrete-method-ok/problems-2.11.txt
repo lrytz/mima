@@ -1,0 +1,1 @@
+method b()Int in trait foo.T is present only in new version

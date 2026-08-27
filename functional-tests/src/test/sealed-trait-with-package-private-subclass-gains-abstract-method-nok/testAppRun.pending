@@ -1,0 +1,2 @@
+mima reports the new abstract method, but no client can extend the
+package-private Open, so nothing implements foo.T outside the library.

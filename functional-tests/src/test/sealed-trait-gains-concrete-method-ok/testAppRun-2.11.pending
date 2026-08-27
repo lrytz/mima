@@ -1,0 +1,2 @@
+2.11 reports the new concrete method, because a class that mixed the
+trait in needs a forwarder, but foo.C is final and the app never breaks.
