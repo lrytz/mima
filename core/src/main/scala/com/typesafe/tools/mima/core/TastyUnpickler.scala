@@ -78,8 +78,10 @@ object TastyUnpickler {
   }.traverse(tree)
 
   def copyPrivateFlags(tree: Tree, pkgInfo: PackageInfo): Unit = new ClassTraverser(pkgInfo) {
-    override def forEachClass(clsDef: ClsDef, cls: ClassInfo): Unit =
+    override def forEachClass(clsDef: ClsDef, cls: ClassInfo): Unit = {
+      if (clsDef.flags.isSealed) cls._sealed = true
       clsDef.privateWithin.foreach(_ => cls.module._scopedPrivate = true)
+    }
 
     override def traverseTemplate(tmpl: Template): Unit = {
       super.traverseTemplate(tmpl)
@@ -219,6 +221,7 @@ object TastyUnpickler {
             case PRIVATEqualified          => privateWithin = Some(readType())
             case PROTECTEDqualified        => privateWithin = Some(readType())
             case PRIVATE                   => flags |= Flags.PRIVATE
+            case SEALED                    => flags |= Flags.SEALED
             case tag if isModifierTag(tag) => skipTree(tag)
             case tag                       => assert(false, s"illegal modifier tag ${astTagToString(tag)} at ${currentAddr.index - 1}, end = $end")
           })
@@ -616,11 +619,13 @@ object TastyUnpickler {
 
   object Flags { // internal, assignment is ours to choose
     final val PRIVATE = 1L << 0
+    final val SEALED  = 1L << 1
   }
 
   implicit class FlagsExtensions(val flags: Flags) extends AnyVal {
     def hasFlag(flag: Flags): Boolean = (flags & flag) != 0
     def isPrivate: Boolean            = hasFlag(Flags.PRIVATE)
+    def isSealed: Boolean             = hasFlag(Flags.SEALED)
   }
 
 }
