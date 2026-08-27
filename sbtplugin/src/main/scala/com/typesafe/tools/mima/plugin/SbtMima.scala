@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 200, align.preset = some }
 package com.typesafe.tools.mima
 package plugin
 
@@ -34,6 +35,7 @@ object SbtMima {
   private def sanityCheckScalaVersion(scalaVersion: String) = {
     scalaBinaryVersion(scalaVersion) match {
       case "2.11" | "2.12" | "2.13" | "3" => () // ok
+
       case _ => throw new IllegalArgumentException(s"MiMa supports Scala 2.11, 2.12, 2.13 and 3, not $scalaVersion")
     }
   }

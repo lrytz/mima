@@ -1,3 +1,4 @@
+// scalafmt: { spaces.afterSymbolicDefs = true }
 package com.typesafe.tools.mima
 package plugin
 
@@ -20,6 +21,7 @@ object PluginCompat {
     def contains(elem: A) = false
     def + (elem: A)       = Set(elem)
     def - (elem: A)       = this
+
     override def size                  = 0
     override def foreach[U](f: A => U) = ()
     override def toSet[B >: A]: Set[B] = this.asInstanceOf[Set[B]]

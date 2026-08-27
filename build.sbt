@@ -24,6 +24,7 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
 )
 
 val isJdk17inCI = Properties.isJavaAtLeast("17") && sys.env.contains("CI") // to split released artifacts by JDK
+
 def skipIfJdk17inCI[T](obj: => Seq[T]): Seq[T] = if (isJdk17inCI) Seq.empty else obj
 
 def compilerOptions(scalaVersion: String): Seq[String] =
@@ -42,6 +43,7 @@ def compilerOptions(scalaVersion: String): Seq[String] =
   (CrossVersion.partialVersion(scalaVersion) match {
     case Some((2, 12)) => Seq("-Xsource:3")
     case Some((2, 13)) => Seq("-Xsource:3-cross")
+
     case _ => Seq()
   })
 
@@ -106,6 +108,7 @@ val sbtplugin = project.enablePlugins(SbtPlugin).dependsOn(core.jvm).settings(co
 )
 
 val testFunctional = taskKey[Unit]("Run the functional test")
+
 val functionalTests = Project("functional-tests", file("functional-tests"))
   .dependsOn(core.jvm)
   .settings(commonSettings)

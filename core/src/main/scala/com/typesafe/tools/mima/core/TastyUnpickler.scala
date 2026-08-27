@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 230, align.preset = more }
 package com.typesafe.tools.mima.core
 
 import java.util.UUID
@@ -50,6 +51,7 @@ object TastyUnpickler {
       val pkgName = pkgNames.headOption.getOrElse(nme.Empty)
       if (pkgName.source == pkgInfo.fullName) {
         val clsName0 = clsNames.reverseIterator.mkString("$")
+
         val clsName = clsNames match {
           case TypeName(ObjectName(_)) :: _ => clsName0 + "$"
           case _                            => clsName0
@@ -149,6 +151,7 @@ object TastyUnpickler {
           val end  = readEnd()
           val name = readName()
           skipTree(readByte()) // type
+
           if (!nothingButMods(end)) skipTree(readByte()) // rhs
           val (privateWithin, classPrivate, annots) = readMods(end)
           ValDef(name, privateWithin, classPrivate, annots)
@@ -161,6 +164,7 @@ object TastyUnpickler {
           val name = readName()
           while (nextByte == TYPEPARAM || nextByte == PARAM || nextByte == EMPTYCLAUSE || nextByte == SPLITCLAUSE) skipTree(readByte()) // params
           skipTree(readByte()) // returnType
+
           if (!nothingButMods(end)) skipTree(readByte()) // rhs
           val (privateWithin, classPrivate, annots) = readMods(end)
           DefDef(name, privateWithin, classPrivate, annots)
@@ -194,6 +198,7 @@ object TastyUnpickler {
         def readClassDef(name: Name, end: Addr) = {
           // NameRef Template Modifier* -- modifiers class name template
           val template = readTemplate()
+
           val (privateWithin, classPrivate, annots) = readMods(end)
           ClsDef(name.toTypeName, template, privateWithin, annots)
         }
@@ -288,10 +293,12 @@ object TastyUnpickler {
   }
 
   sealed trait Type extends Tree
+
   final case class UnknownType(tag: Int)           extends Type { def show = s"UnknownType(${astTagToString(tag)})" }
   final case class TypeRef(qual: Type, name: Name) extends Type { def show = s"$qual.$name" }
 
   sealed trait Path extends Type
+
   final case class UnknownPath(tag: Int)       extends Path { def show = s"UnknownPath(${astTagToString(tag)})" }
   final case class TypeRefPkg(fullyQual: Name) extends Path { def show = s"$fullyQual"                          }
 
@@ -344,11 +351,13 @@ object TastyUnpickler {
 
   class FilterTraverser(p: Tree => Boolean) extends Traverser {
     val hits = mutable.ListBuffer[Tree]()
+
     override def traverse(t: Tree) = { if (p(t)) hits += t; super.traverse(t) }
   }
 
   class CollectTraverser[T](pf: PartialFunction[Tree, T]) extends Traverser {
     val results = mutable.ListBuffer[T]()
+
     override def traverse(tree: Tree): Unit = { pf.runWith(results += _)(tree); super.traverse(tree) }
   }
 
@@ -386,10 +395,11 @@ object TastyUnpickler {
     val tag = readByte()
     val end = readEnd()
 
-    def nameAtIdx(idx: Int) = try names(idx) catch {
-      case e: ArrayIndexOutOfBoundsException =>
-        throw new Exception(s"trying to read name @ idx=$idx tag=${nameTagToString(tag)}", e)
-    }
+    def nameAtIdx(idx: Int) =
+      try names(idx) catch {
+        case e: ArrayIndexOutOfBoundsException =>
+          throw new Exception(s"trying to read name @ idx=$idx tag=${nameTagToString(tag)}", e)
+      }
 
     def readName() = nameAtIdx(readNat())
 
@@ -451,13 +461,10 @@ object TastyUnpickler {
   @nowarn("msg=constructor modifiers are assumed by synthetic")
   final case class TypeName private[TastyUnpickler] (base: Name)                             extends Name
   final case class QualifiedName(qual: Name, sep: SimpleName, sel: SimpleName)               extends Name
-
   final case class UniqueName(qual: Name, sep: SimpleName, num: Int)                         extends Name
   final case class DefaultName(qual: Name, num: Int)                                         extends Name
-
   final case class PrefixName(pref: SimpleName, qual: Name)                                  extends Name
   final case class SuffixName(qual: Name, suff: SimpleName)                                  extends Name
-
   final case class SignedName(qual: Name, sig: MethodSignature[ErasedTypeRef], target: Name) extends Name
 
   object Name {
@@ -573,6 +580,7 @@ object TastyUnpickler {
 
     def readToolingVersion() = {
       val toolingLen = readNat()
+
       val toolingVersion = new String(bytes, currentAddr.index, toolingLen)
       goto(currentAddr + toolingLen)
       toolingVersion

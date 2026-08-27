@@ -124,7 +124,7 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
       case STRING_TAG |  CLASS_TAG => in.skip(2)
       case                ENUM_TAG => in.skip(4)
       case               ARRAY_TAG => for (_ <- 0 until in.nextChar) skipAnnotArg()
-      case          ANNOTATION_TAG => in.skip(2); /* type */ skipAnnotArgs()
+      case ANNOTATION_TAG         => in.skip(2) /* type */; skipAnnotArgs()
     }
 
     def skipAnnotArgs() = for (_ <- 0 until in.nextChar) { in.skip(2); skipAnnotArg() }

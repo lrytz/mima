@@ -1,3 +1,5 @@
+// scalafmt cannot reproduce the hand-aligned columns below
+// format: off
 package com.typesafe.tools.mima.core
 
 import TastyFormat._, NameTags._

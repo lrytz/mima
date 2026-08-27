@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 150, align.preset = more, spaces.inImportCurlyBraces = false  }
 package com.typesafe.tools.mima.lib
 
 import com.typesafe.tools.mima.core.ClassPath
@@ -18,7 +19,6 @@ final class TestCase(val baseDir: Directory, val scalaCompiler: ScalaCompiler, v
   def name               = baseDir.name
   def scalaBinaryVersion = if (scalaCompiler.isScala3) "3" else scalaCompiler.version.take(4)
   def scalaJars          = scalaCompiler.jars
-
   def skip: Boolean      = (baseDir / s"skip-${scalaBinaryVersion}.txt").exists
 
   val srcV1  = (baseDir / "v1").toDirectory
@@ -47,6 +47,7 @@ final class TestCase(val baseDir: Directory, val scalaCompiler: ScalaCompiler, v
     if (sourceFiles.forall(_.isJava)) return Success(())
     val bootcp = ClassPath.join(scalaJars.map(_.getPath))
     val cpOpt  = if (cp.isEmpty) Nil else List("-classpath", ClassPath.join(cp.map(_.path)))
+
     val optsFile = baseDir / s"scalac-options-${scalaBinaryVersion}.txt"
     val testOpts = if (optsFile.exists) {
       Files.readAllLines(optsFile.jfile.toPath, StandardCharsets.UTF_8).asScala.filterNot(_.trim.startsWith("#")).toList
@@ -54,6 +55,7 @@ final class TestCase(val baseDir: Directory, val scalaCompiler: ScalaCompiler, v
       List.empty
     }
     val paths = sourceFiles.map(_.path)
+
     val args = "-bootclasspath" :: bootcp :: testOpts ::: cpOpt ::: "-d" :: s"$out" :: paths
     scalaCompiler.compile(args)
   }
@@ -70,7 +72,9 @@ final class TestCase(val baseDir: Directory, val scalaCompiler: ScalaCompiler, v
       }
     }.asJava
     val infos = new mutable.LinkedHashSet[Diagnostic[_ <: JavaFileObject]]
+
     val task = javaCompiler.getTask(null, null, d => infos += d, opts, null, units)
+
     val success = task.call() && infos.forall(_.getKind != Diagnostic.Kind.ERROR)
     if (success) Success(())
     else Failure(new Exception(s"javac failed; ${infos.size} messages:\n  ${infos.mkString("\n  ")}"))
@@ -79,9 +83,11 @@ final class TestCase(val baseDir: Directory, val scalaCompiler: ScalaCompiler, v
   def runMain(outLib: Directory): Try[Unit] = {
     val cp = List(outLib, outApp).map(_.jfile) ++ scalaJars
     val cl = new URLClassLoader(cp.map(_.toURI.toURL).toArray, null)
+
     val meth = cl.loadClass("App").getMethod("main", classOf[Array[String]])
 
     val printStream = new PrintStream(new ByteArrayOutputStream(), /* autoflush = */ true, "UTF-8")
+
     val savedOut = System.out
     val savedErr = System.err
     try {

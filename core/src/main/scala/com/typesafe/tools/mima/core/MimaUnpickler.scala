@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 160 }
 package com.typesafe.tools.mima.core
 
 import com.typesafe.tools.mima.core.PickleFormat.*
@@ -80,6 +81,7 @@ object MimaUnpickler {
       val name  = readNameRef()
       val owner = readSymRef()
       val flags = buf.readLongNat()
+
       val (privateWithin, info) = buf.readNat() match {
         case info if buf.readIndex == end => (-1, info)
         case privateWithin                => (privateWithin, buf.readNat())
@@ -154,6 +156,7 @@ object MimaUnpickler {
         NoClass
       } else {
         val fallback = if (symbolInfo.isModuleOrModuleClass) clazz.moduleClass else clazz
+
         def lookup(cls: ClassInfo) = {
           val clsName   = cls.bytecodeName
           val separator = if (clsName.endsWith("$")) "" else "$"
@@ -235,6 +238,7 @@ object MimaUnpickler {
   final case class UnknownEntry(tag: Int) extends Entry
 
   sealed trait Name extends Entry { def tag: Int; def value: String }
+
   final case class TermName(value: String) extends Name { def tag = TERMname }
   final case class TypeName(value: String) extends Name { def tag = TYPEname }
 
@@ -269,11 +273,11 @@ object MimaUnpickler {
   final case class ExtInfo(tag: Int, name: Name, owner: SymInfo) extends SymInfo
 
   sealed trait TypeInfo extends Entry
+
   final case class UnknownType(tag: Int) extends TypeInfo
 
   final case class ThisTypeInfo(sym: SymInfo)                                      extends TypeInfo
   final case class TypeRefInfo(tpe: TypeInfo, sym: SymInfo, targs: List[TypeInfo]) extends TypeInfo
-
   final case class SymAnnotInfo(sym: SymbolInfo, tpe: TypeInfo)                    extends Entry
 
   def readNat(data: Array[Byte]): Int = {

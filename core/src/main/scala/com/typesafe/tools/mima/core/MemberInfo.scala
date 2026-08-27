@@ -45,6 +45,7 @@ private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, fla
   def methodString: String      = s"$shortMethodString in ${owner.classString}"
   def shortMethodString: String = {
     val prefix = if (hasSyntheticName) if (isExtensionMethod) "extension " else "synthetic " else ""
+
     val deprecated = if (isDeprecated) "deprecated " else ""
 
     val privatePrefix = if (isScopedPrivate) {
@@ -61,6 +62,7 @@ private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, fla
   lazy val paramsCount: Int = {
     tpe match {
       case MethodType(paramTypes, _) => paramTypes.length
+
       case _ => throw new MatchError(s"Failed to get method params, member had type $tpe, not MethodType.")
     }
   }

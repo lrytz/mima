@@ -7,6 +7,7 @@ import coursier._
 object Coursier {
   val scalaEA = mvn"https://scala-ci.typesafe.com/artifactory/scala-integration/"
   val scalaPR = mvn"https://scala-ci.typesafe.com/artifactory/scala-pr-validation-snapshots/"
+
   val sbtPluginReleases = Repositories.sbtPlugin("releases")
 
   def fetch(dep: Dependency): Seq[File] = {

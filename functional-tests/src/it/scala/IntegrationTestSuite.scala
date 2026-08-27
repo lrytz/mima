@@ -259,7 +259,6 @@ class IntegrationTestSuite extends munit.FunSuite {
     ),
   ).get)
 
-
   test("scala-reflect-2-10")(testIntegration("org.scala-lang", "scala-reflect", "2.10.0", "2.10.7")(
     expected = List(
       "static method currentMirror()scala.reflect.api.JavaMirrors#JavaMirror in class scala.reflect.runtime.package does not have a correspondent in new version",

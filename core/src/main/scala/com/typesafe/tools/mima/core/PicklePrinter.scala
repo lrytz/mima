@@ -1,3 +1,5 @@
+// scalafmt cannot reproduce the hand-aligned columns below
+// format: off
 package com.typesafe.tools.mima.core
 
 import java.lang.Long.toHexString

@@ -35,6 +35,7 @@ final class SignatureSpec extends munit.FunSuite {
     import Signature.FormalTypeParameter
     val rest = "(TT;Lscala/collection/immutable/List<TU;>;)Lscala/Option<TT;>;>"
     val orig = s"T:Ljava/lang/Object;U:Lscala/collection/immutable/List<TT;>;>$rest"
+
     val (types, obtRest) = FormalTypeParameter.parseList(orig)
     assertEquals(types.length, 2)
     assertEquals(types(0), FormalTypeParameter("T", "Ljava/lang/Object"))

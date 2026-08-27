@@ -88,5 +88,6 @@ private[mima] object ClassPath {
     def asClassPathString     = join(aggregates.map(_.asClassPathString).distinct)
   }
 
-  private def andClose[A <: AutoCloseable, B](xs: A)(f: A => B): B = try f(xs) finally xs.close()
+  private def andClose[A <: AutoCloseable, B](xs: A)(f: A => B): B =
+    try f(xs) finally xs.close()
 }

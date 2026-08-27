@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 120, align.preset = some }
 package com.typesafe.tools.mima.lib
 
 import javax.tools._

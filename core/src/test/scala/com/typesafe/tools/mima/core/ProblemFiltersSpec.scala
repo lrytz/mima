@@ -1,3 +1,4 @@
+// scalafmt: { align.tokens."+" = [ { code = "," } ] }
 package com.typesafe.tools.mima.core
 
 final class ProblemFiltersSpec extends munit.FunSuite {

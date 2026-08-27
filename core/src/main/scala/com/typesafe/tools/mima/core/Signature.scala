@@ -8,8 +8,10 @@ class Signature(private val signature: String) {
   lazy val canonicalized = {
     signature.headOption match {
       case None | Some('(') => signature
+
       case _ =>
         val (formalTypeParameters, _) = FormalTypeParameter.parseList(signature.drop(1))
+
         val replacements = formalTypeParameters.map(_.identifier).zipWithIndex
         replacements.foldLeft(signature) { case (sig, (from, to)) =>
           sig
@@ -33,7 +35,7 @@ class Signature(private val signature: String) {
     // Also match when the signature only differs in the name of a type parameter
     canonicalized == newer.canonicalized
   }
- 
+
   // Special case for scala#7975
   private def hasMatchingCtorSig(newer: String): Boolean =
     newer.isEmpty || // ignore losing signature on constructors

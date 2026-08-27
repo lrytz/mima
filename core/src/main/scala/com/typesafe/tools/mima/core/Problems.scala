@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 280 }
 package com.typesafe.tools.mima.core
 
 trait ProblemRef {
@@ -20,7 +21,9 @@ sealed abstract class Problem extends ProblemRef {
   }
 
   /** 'affectedVersion' is "current" for bincompat, "other" or "previous" for forward-compat. */
-  final def description: String => String = affectedVersion => this match {
+  final def description: String => String = getDescription(_)
+
+  private def getDescription(affectedVersion: String): String = this match {
     case MissingClassProblem(oldclazz)                 => s"${oldclazz.classString} does not have a correspondent in $affectedVersion version"
     case IncompatibleTemplateDefProblem(ref, newclazz) => s"declaration of ${ref.description} is ${newclazz.description} in $affectedVersion version; changing ${ref.declarationPrefix} to ${newclazz.declarationPrefix} breaks client code"
     case InaccessibleClassProblem(ref)                 => s"${ref.classString} is inaccessible in $affectedVersion version, it must be public."

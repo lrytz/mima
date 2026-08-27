@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 140 }
 package com.typesafe.tools.mima.core
 
 import java.lang.Float.intBitsToFloat
@@ -13,8 +14,7 @@ private[core] sealed abstract class BytesReader(buf: Array[Byte]) {
   final def getChar(idx: Int): Char = (((buf(idx) & 0xff) << 8) + (buf(idx + 1) & 0xff)).toChar
 
   final def getInt(idx: Int): Int =
-    ((buf(idx    ) & 0xff) << 24) + ((buf(idx + 1) & 0xff) << 16) +
-    ((buf(idx + 2) & 0xff) << 8)  +  (buf(idx + 3) & 0xff)
+    ((buf(idx) & 0xff) << 24) + ((buf(idx + 1) & 0xff) << 16) + ((buf(idx + 2) & 0xff) << 8) + (buf(idx + 3) & 0xff)
 
   final def getLong(idx: Int): Long     = (getInt(idx).toLong << 32) + (getInt(idx + 4) & 0xffffffffL)
   final def getFloat(idx: Int): Float   = intBitsToFloat(getInt(idx))

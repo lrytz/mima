@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 160 }
 package com.typesafe.tools.mima.core
 
 import TastyFormat._, TastyTagOps._
@@ -67,23 +68,16 @@ object TastyPrinter {
           case TYPEDEF        => printName(); printTrees()
           case TYPEPARAM      => printName(); printTrees()
           case     PARAM      => printName(); printTrees()
-
           case RETURN         => printNat(); printTrees()
-
           case BIND           => printName(); printTrees()
           case REFINEDtype    => printName(); printTrees()
-
           case       POLYtype => printMethodic()
           case TYPELAMBDAtype => printMethodic()
-
           case      PARAMtype => printNat(); printNat() // target/ref Addr + paramNum
-
           case TERMREFin      => printName(); printTrees()
           case TYPEREFin      => printName(); printTrees()
           case  SELECTin      => printName(); printTrees()
-
           case     METHODtype => printMethodic()
-
           case _              => printTrees()
         }
         if (currentAddr != end) {
@@ -127,6 +121,7 @@ object TastyPrinter {
   private def unpicklePkgAndClsName(in: TastyReader, names: Names): (Name, Name) = {
     import in._
     def readName(r: TastyReader = in) = names(r.readNat())
+
     def readNames(packageName: Name): (Name, Name) = readByte() match {
       case TYPEDEF    => readEnd(); (packageName, readName())
       case PACKAGE    => readEnd(); readNames(packageName)

@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 150, align.preset = none }
 package com.typesafe.tools.mima
 package plugin
 
@@ -71,7 +72,7 @@ object MimaPlugin extends AutoPlugin {
     val depRes = mimaDependencyResolution.value
     val taskStreams = streams.value
     val smi = scalaModuleInfo.value
-    previousArtifacts => previousArtifacts match {
+    _ match {
       case _: NoPreviousArtifacts.type => NoPreviousClassfiles
       case previousArtifacts =>
         previousArtifacts.iterator.map { m =>

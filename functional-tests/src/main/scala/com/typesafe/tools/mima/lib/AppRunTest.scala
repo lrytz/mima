@@ -1,3 +1,4 @@
+// scalafmt: { align.preset = more }
 package com.typesafe.tools.mima.lib
 
 import scala.reflect.io.{ Directory, Path }
@@ -15,8 +16,8 @@ object AppRunTest {
     insane   = testCase.versionedFile("testAppRun.insane").exists
     pending  = testCase.versionedFile("testAppRun.pending").exists
     expectOk = testCase.blankFile(testCase.versionedFile(oracleFile))
-  //() <- testCase.compileApp(v2)      // compile app with v2
-  //() <- testCase.runMain(v2)         // sanity check 1: run app with v2
+//    () <- testCase.compileApp(v2)      // compile app with v2
+//    () <- testCase.runMain(v2)         // sanity check 1: run app with v2
     () <- testCase.compileApp(v1)      // recompile app with v1
     () <- testCase.runMain(v1) match { // sanity check 2: run app with v1
       case Failure(t) if !insane => Failure(new Exception("Sanity runMain check failed", t, true, false) {})

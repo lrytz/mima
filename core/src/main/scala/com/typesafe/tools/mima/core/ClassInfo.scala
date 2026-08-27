@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 150 }
 package com.typesafe.tools.mima.core
 
 import scala.reflect.NameTransformer
@@ -86,7 +87,6 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def isImplClass: Boolean      = bytecodeName.endsWith("$class")
   final def isInterface: Boolean      = ClassfileParser.isInterface(flags) // java interface or trait w/o impl methods
   final def isClass: Boolean          = !isTrait && !isInterface // class, object or trait's impl class
-
   final def scopedPrivateSuff: String = if (isScopedPrivate) "[..]" else ""
   final def accessModifier: String    = if (isProtected) s"protected$scopedPrivateSuff" else if (isPrivate) s"private$scopedPrivateSuff" else ""
   final def declarationPrefix: String = if (isModuleClass) "object" else if (isTrait) "trait" else if (isInterface) "interface" else "class"
@@ -101,9 +101,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
     val idx = bytecodeName.stripSuffix("$").lastIndexOf('$')
     if (idx != -1)  {
       val outerName = bytecodeName.substring(0, idx)
-      owner.classes.getOrElse(outerName,
-        owner.classes.getOrElse(s"$outerName$$",
-          NoClass))
+      owner.classes.getOrElse(outerName, owner.classes.getOrElse(s"$outerName$$", NoClass))
     } else NoClass
   }
 

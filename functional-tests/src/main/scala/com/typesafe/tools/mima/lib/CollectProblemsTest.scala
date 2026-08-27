@@ -1,3 +1,4 @@
+// scalafmt: { align.preset = some, spaces.inImportCurlyBraces = false  }
 package com.typesafe.tools.mima.lib
 
 import java.io.File

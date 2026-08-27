@@ -10,7 +10,6 @@ private[core] abstract class InfoLike {
 
   /** The name as found in the original Scala source. */
   final def decodedName: String  = NameTransformer.decode(bytecodeName)
-
   final def isPublic: Boolean    = ClassfileParser.isPublic(flags)
   final def isPrivate: Boolean   = ClassfileParser.isPrivate(flags)
   final def isProtected: Boolean = ClassfileParser.isProtected(flags)
@@ -19,7 +18,6 @@ private[core] abstract class InfoLike {
   final def isBridge: Boolean    = ClassfileParser.isBridge(flags)
   final def isDeferred: Boolean  = ClassfileParser.isDeferred(flags)
   final def isSynthetic: Boolean = ClassfileParser.isSynthetic(flags)
-
   final def nonPublic: Boolean   = !isPublic
   final def nonFinal: Boolean    = !isFinal
   final def isConcrete: Boolean  = !isDeferred

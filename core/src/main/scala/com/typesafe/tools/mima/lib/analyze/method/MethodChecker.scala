@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 150, align.preset = some }
 package com.typesafe.tools.mima.lib.analyze.method
 
 import com.typesafe.tools.mima.core._

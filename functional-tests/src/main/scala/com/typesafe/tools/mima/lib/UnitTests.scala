@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 150 }
 package com.typesafe.tools.mima.lib
 
 import scala.reflect.io.Path
