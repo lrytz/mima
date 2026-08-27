@@ -98,11 +98,11 @@ object TastyUnpickler {
       val bytecodeMethods = clazz.methods.get(name.source).filter(!_.isBridge).toList
 
       if (pickleMethods.size == bytecodeMethods.size) {
-        if (pickleMethods.exists(t => t.privateWithin.isDefined || t.classPrivate)) {
+        if (pickleMethods.exists(t => t.privateWithin.isDefined || t.flags.isPrivate)) {
           bytecodeMethods.zip(pickleMethods).foreach { case (bytecodeMeth, pickleMeth) =>
 
             bytecodeMeth.scopedPrivate = pickleMeth.privateWithin.isDefined
-            bytecodeMeth.classPrivate = pickleMeth.classPrivate
+            bytecodeMeth.classPrivate = pickleMeth.flags.isPrivate
           }
         }
       }
@@ -153,8 +153,8 @@ object TastyUnpickler {
           skipTree(readByte()) // type
 
           if (!nothingButMods(end)) skipTree(readByte()) // rhs
-          val (privateWithin, classPrivate, annots) = readMods(end)
-          ValDef(name, privateWithin, classPrivate, annots)
+          val (privateWithin, flags, annots) = readMods(end)
+          ValDef(name, privateWithin, flags, annots)
         }
 
         def readDefDef() = {
@@ -166,8 +166,8 @@ object TastyUnpickler {
           skipTree(readByte())                                                                                                          // returnType
 
           if (!nothingButMods(end)) skipTree(readByte()) // rhs
-          val (privateWithin, classPrivate, annots) = readMods(end)
-          DefDef(name, privateWithin, classPrivate, annots)
+          val (privateWithin, flags, annots) = readMods(end)
+          DefDef(name, privateWithin, flags, annots)
         }
 
         def readTemplate(): Template = {
@@ -202,27 +202,27 @@ object TastyUnpickler {
           // NameRef Template Modifier* -- modifiers class name template
           val template = readTemplate()
 
-          val (privateWithin, classPrivate, annots) = readMods(end)
-          ClsDef(name.toTypeName, template, privateWithin, annots)
+          val (privateWithin, flags, annots) = readMods(end)
+          ClsDef(name.toTypeName, template, privateWithin, annots, flags)
         }
 
         def readTypeMemberDef(end: Addr) = { goto(end); UnknownTree(TYPEDEF) } // NameRef type_Term Modifier* -- modifiers type name (= type | bounds)
 
-        def readMods(end: Addr): (Option[Type], Boolean, List[Annot]) = {
+        def readMods(end: Addr): (Option[Type], Flags, List[Annot]) = {
           //   PRIVATEqualified qualifier_Type --   private[qualifier]
           // PROTECTEDqualified qualifier_Type -- protected[qualifier]
           var privateWithin = Option.empty[Type]
-          var classPrivate  = false
+          var flags: Flags  = 0
           val annots        = new ListBuffer[Annot]
           doUntil(end)(readByte() match {
             case ANNOTATION                => annots += readAnnot()
             case PRIVATEqualified          => privateWithin = Some(readType())
             case PROTECTEDqualified        => privateWithin = Some(readType())
-            case PRIVATE                   => classPrivate = true
+            case PRIVATE                   => flags |= Flags.PRIVATE
             case tag if isModifierTag(tag) => skipTree(tag)
             case tag                       => assert(false, s"illegal modifier tag ${astTagToString(tag)} at ${currentAddr.index - 1}, end = $end")
           })
-          (privateWithin, classPrivate, annots.toList)
+          (privateWithin, flags, annots.toList)
         }
 
         def readTypeDef() = {
@@ -283,16 +283,21 @@ object TastyUnpickler {
 
   final case class Pkg(path: Path, trees: List[Tree]) extends Tree { def show = s"package $path${trees.map("\n  " + _).mkString}" }
 
-  final case class ClsDef(name: TypeName, template: Template, privateWithin: Option[Type], annots: List[Annot]) extends Tree {
-    def show = s"${showXs(annots, end = " ")}${showPrivateWithin(privateWithin)}class $name$template"
+  final case class ClsDef(name: TypeName, template: Template, privateWithin: Option[Type], annots: List[Annot], flags: Flags) extends MemberStat {
+    override protected def showContents = s"class $name$template"
   }
-  final case class Template(classes: List[ClsDef], fields: List[ValDef], meths: List[DefDef])                        extends Tree { def show = s"${(classes ::: meths).map("\n  " + _).mkString}" }
-  final case class ValDef(name: Name, privateWithin: Option[Type], classPrivate: Boolean, annots: List[Annot] = Nil) extends TermMemberDef
-  final case class DefDef(name: Name, privateWithin: Option[Type], classPrivate: Boolean, annots: List[Annot] = Nil) extends TermMemberDef
+  final case class Template(classes: List[ClsDef], fields: List[ValDef], meths: List[DefDef])               extends Tree { def show = s"${(classes ::: meths).map("\n  " + _).mkString}" }
+  final case class ValDef(name: Name, privateWithin: Option[Type], flags: Flags, annots: List[Annot] = Nil) extends TermMemberDef
+  final case class DefDef(name: Name, privateWithin: Option[Type], flags: Flags, annots: List[Annot] = Nil) extends TermMemberDef
 
-  sealed trait TermMemberDef extends Tree {
-    def name: Name; def privateWithin: Option[Type]; def classPrivate: Boolean; def annots: List[Annot]
-    def show = s"${showXs(annots, end = " ")}${showPrivateWithin(privateWithin)}def $name"
+  sealed trait MemberStat extends Tree {
+    protected def showContents: String
+    def name: Name; def privateWithin: Option[Type]; def flags: Flags; def annots: List[Annot]
+    def show = s"${showXs(annots, end = " ")}${showPrivateWithin(privateWithin)}$showContents"
+  }
+
+  sealed trait TermMemberDef extends MemberStat {
+    override protected def showContents = s"def $name"
   }
 
   sealed trait Type extends Tree
@@ -327,7 +332,7 @@ object TastyUnpickler {
     def traverseName(name: Name) = ()
 
     def traversePkg(pkg: Pkg)                              = { val Pkg(path, trees) = pkg; traverse(path); trees.foreach(traverse) }
-    def traverseClsDef(clsDef: ClsDef)                     = { val ClsDef(name, tmpl, privateWithin, annots) = clsDef; traverseName(name); traverseTemplate(tmpl); traversePrivateWithin(privateWithin); annots.foreach(traverse) }
+    def traverseClsDef(t: ClsDef)                          = { traverseName(t.name); traverseTemplate(t.template); traversePrivateWithin(t.privateWithin); t.annots.foreach(traverse) }
     def traverseTemplate(tmpl: Template)                   = { val Template(classes, fields, meths) = tmpl; classes.foreach(traverse); fields.foreach(traverse); meths.foreach(traverse) }
     def traverseValDef(valDef: ValDef)                     = { val ValDef(name, privateWithin, _, annots) = valDef; traverseName(name); traversePrivateWithin(privateWithin); annots.foreach(traverse) }
     def traverseDefDef(defDef: DefDef)                     = { val DefDef(name, privateWithin, _, annots) = defDef; traverseName(name); traversePrivateWithin(privateWithin); annots.foreach(traverse) }
@@ -606,4 +611,16 @@ object TastyUnpickler {
   def showXs[X <: ShowSelf](xs: List[X], start: String = "", sep: String = " ", end: String = ""): String =
     if (xs.isEmpty) ""
     else xs.iterator.map(_.show).mkString(start, sep, end)
+
+  type Flags = Long
+
+  object Flags { // internal, assignment is ours to choose
+    final val PRIVATE = 1L << 0
+  }
+
+  implicit class FlagsExtensions(val flags: Flags) extends AnyVal {
+    def hasFlag(flag: Flags): Boolean = (flags & flag) != 0
+    def isPrivate: Boolean            = hasFlag(Flags.PRIVATE)
+  }
+
 }
