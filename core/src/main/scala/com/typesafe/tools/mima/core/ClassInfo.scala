@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 150 }
 package com.typesafe.tools.mima.core
 
 import scala.reflect.NameTransformer
@@ -79,14 +80,13 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def annotations: List[AnnotInfo] = afterLoading(_annotations)
   final def implClass: ClassInfo         = { owner.setImplClasses; _implClass } // returns NoClass if this is not a trait
   final def moduleClass: ClassInfo       = { owner.setModules; if (_moduleClass == NoClass || _moduleClass == null) this else _moduleClass }
-  final def module: ClassInfo            = { owner.setModules; if (_module      == NoClass || _module      == null) this else _module      }
+  final def module: ClassInfo            = { owner.setModules; if (_module == NoClass || _module == null) this else _module }
 
-  final def isTrait: Boolean          = implClass ne NoClass // trait with some concrete methods or fields
-  final def isModuleClass: Boolean    = bytecodeName.endsWith("$") // super scuffed
+  final def isTrait: Boolean          = implClass ne NoClass               // trait with some concrete methods or fields
+  final def isModuleClass: Boolean    = bytecodeName.endsWith("$")         // super scuffed
   final def isImplClass: Boolean      = bytecodeName.endsWith("$class")
   final def isInterface: Boolean      = ClassfileParser.isInterface(flags) // java interface or trait w/o impl methods
-  final def isClass: Boolean          = !isTrait && !isInterface // class, object or trait's impl class
-
+  final def isClass: Boolean          = !isTrait && !isInterface           // class, object or trait's impl class
   final def scopedPrivateSuff: String = if (isScopedPrivate) "[..]" else ""
   final def accessModifier: String    = if (isProtected) s"protected$scopedPrivateSuff" else if (isPrivate) s"private$scopedPrivateSuff" else ""
   final def declarationPrefix: String = if (isModuleClass) "object" else if (isTrait) "trait" else if (isInterface) "interface" else "class"
@@ -99,11 +99,9 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
 
   lazy val outer: ClassInfo = {
     val idx = bytecodeName.stripSuffix("$").lastIndexOf('$')
-    if (idx != -1)  {
+    if (idx != -1) {
       val outerName = bytecodeName.substring(0, idx)
-      owner.classes.getOrElse(outerName,
-        owner.classes.getOrElse(s"$outerName$$",
-          NoClass))
+      owner.classes.getOrElse(outerName, owner.classes.getOrElse(s"$outerName$$", NoClass))
     } else NoClass
   }
 
@@ -120,7 +118,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def lookupClassMethods(method: MethodInfo): Iterator[MethodInfo] = {
     val name = method.bytecodeName
     if (name == MemberInfo.ConstructorName) methods.get(name) // constructors are not inherited
-    else if (method.isStatic) methods.get(name) // static methods are not inherited
+    else if (method.isStatic) methods.get(name)               // static methods are not inherited
     else thisAndSuperClasses.flatMap(_.methods.get(name))
   }
 
@@ -219,7 +217,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   private def hasMatchingSig(sig: String, tsig: String): Boolean = {
     val ilen = sig.length
     val tlen = tsig.length
-    var i = 2
+    var i    = 2
     while (sig(i) != ';')
       i += 1
     i += 1
@@ -231,7 +229,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
     i == ilen && j == tlen
   }
 
-  def canEqual(other: Any) = other.isInstanceOf[ClassInfo]
+  def canEqual(other: Any)              = other.isInstanceOf[ClassInfo]
   final override def equals(other: Any) = other match {
     case that: ClassInfo => that.canEqual(this) && fullName == that.fullName
     case _               => false

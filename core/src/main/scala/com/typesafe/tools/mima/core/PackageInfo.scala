@@ -1,6 +1,6 @@
 package com.typesafe.tools.mima.core
 
-import scala.annotation.{nowarn, tailrec}
+import scala.annotation.{ nowarn, tailrec }
 import scala.collection.mutable
 
 sealed class SyntheticPackageInfo(val owner: PackageInfo, val name: String) extends PackageInfo {
@@ -9,18 +9,17 @@ sealed class SyntheticPackageInfo(val owner: PackageInfo, val name: String) exte
   lazy val classes  = Map.empty[String, ClassInfo]
 }
 
-@nowarn("msg=under -Xsource:3, inferred")  // return types are a bit different between 2 and 3 but it's fine afaics
+@nowarn("msg=under -Xsource:3, inferred") // return types are a bit different between 2 and 3 but it's fine afaics
 object NoPackageInfo extends PackageInfo {
   val name        = "<no package>"
-  val owner        = this
+  val owner       = this
   def definitions = sys.error("Called definitions on NoPackageInfo")
   val packages    = mutable.Map.empty[String, PackageInfo]
   val classes     = Map.empty[String, ClassInfo]
 }
 
 sealed class ConcretePackageInfo(val owner: PackageInfo, cp: ClassPath, pkg: String, defs: Definitions)
-    extends PackageInfo
-{
+    extends PackageInfo {
   def name        = pkg.split('.').last
   def definitions = defs
 
@@ -43,8 +42,7 @@ final private[core] class DefinitionsPackageInfo(defs: Definitions)
     extends ConcretePackageInfo(NoPackageInfo, defs.classPath, ClassPath.RootPackage, defs)
 
 final private[mima] class DefinitionsTargetPackageInfo(root: PackageInfo)
-    extends SyntheticPackageInfo(root, "<root>")
-{
+    extends SyntheticPackageInfo(root, "<root>") {
   // Needed to fetch classes located in the root (empty package).
   override lazy val classes = root.classes
 }
@@ -107,7 +105,7 @@ sealed abstract class PackageInfo {
       if clazz.isModuleClass
       module <- classes.get(name.init)
     } {
-      clazz._module       = module
+      clazz._module = module
       module._moduleClass = clazz
     }
   }

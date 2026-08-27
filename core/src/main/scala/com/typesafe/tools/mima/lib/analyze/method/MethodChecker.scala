@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 150, align.preset = some }
 package com.typesafe.tools.mima.lib.analyze.method
 
 import com.typesafe.tools.mima.core._
@@ -162,8 +163,8 @@ private[analyze] object MethodChecker {
       if !excludeAnnots.exists(newDeferredMethod.annotations.contains)
       // checks that the newDeferredMethod did not already exist in one of the oldclazz supertypes
       if noInheritedMatchingMethod(oldclazz, newDeferredMethod)(_ => true) &&
-          // checks that no concrete implementation of the newDeferredMethod is provided by one of the newclazz supertypes
-          noInheritedMatchingMethod(newclazz, newDeferredMethod)(_.isConcrete)
+        // checks that no concrete implementation of the newDeferredMethod is provided by one of the newclazz supertypes
+        noInheritedMatchingMethod(newclazz, newDeferredMethod)(_.isConcrete)
     } yield {
       // report a binary incompatibility as there is a new inherited abstract method, which can lead to a AbstractErrorMethod at runtime
       val newmeth = new MethodInfo(newclazz, newDeferredMethod.bytecodeName, newDeferredMethod.flags, newDeferredMethod.descriptor)

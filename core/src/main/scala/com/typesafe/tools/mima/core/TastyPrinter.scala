@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 160 }
 package com.typesafe.tools.mima.core
 
 import TastyFormat._, TastyTagOps._
@@ -7,12 +8,12 @@ object TastyPrinter {
   def printPickle(in: TastyReader, path: String): Unit = {
     println(s"unpickling $path")
 
-    //val header =
-      readHeader(in)
-    //printHeader(header)
+    // val header =
+    readHeader(in)
+    // printHeader(header)
 
     val names = readNames(in)
-    //printNames(names)
+    // printNames(names)
 
     printAllTrees(getTreeReader(in, names), names)
   }
@@ -48,9 +49,9 @@ object TastyPrinter {
       print(s" ${astTagToString(tag)}")
 
       def printLengthTree() = {
-        val len = readNat()
-        val end = currentAddr + len
-        def printTrees() = doUntil(end)(printTree())
+        val len             = readNat()
+        val end             = currentAddr + len
+        def printTrees()    = doUntil(end)(printTree())
         def printMethodic() = {
           printTree()
           while (currentAddr.index < end.index && !isModifierTag(nextByte)) {
@@ -62,28 +63,21 @@ object TastyPrinter {
 
         print(s"(${lengthStr(len.toString)})")
         tag match {
-          case  VALDEF        => printName(); printTrees()
-          case  DEFDEF        => printName(); printTrees()
+          case VALDEF         => printName(); printTrees()
+          case DEFDEF         => printName(); printTrees()
           case TYPEDEF        => printName(); printTrees()
           case TYPEPARAM      => printName(); printTrees()
-          case     PARAM      => printName(); printTrees()
-
+          case PARAM          => printName(); printTrees()
           case RETURN         => printNat(); printTrees()
-
           case BIND           => printName(); printTrees()
           case REFINEDtype    => printName(); printTrees()
-
-          case       POLYtype => printMethodic()
+          case POLYtype       => printMethodic()
           case TYPELAMBDAtype => printMethodic()
-
-          case      PARAMtype => printNat(); printNat() // target/ref Addr + paramNum
-
+          case PARAMtype      => printNat(); printNat() // target/ref Addr + paramNum
           case TERMREFin      => printName(); printTrees()
           case TYPEREFin      => printName(); printTrees()
-          case  SELECTin      => printName(); printTrees()
-
-          case     METHODtype => printMethodic()
-
+          case SELECTin       => printName(); printTrees()
+          case METHODtype     => printMethodic()
           case _              => printTrees()
         }
         if (currentAddr != end) {
@@ -93,7 +87,7 @@ object TastyPrinter {
       }
 
       def printNatASTTree() = tag match {
-        case TERMREFsymbol | TYPEREFsymbol => printNat();  printTree()
+        case TERMREFsymbol | TYPEREFsymbol => printNat(); printTree()
         case _                             => printName(); printTree()
       }
 
@@ -127,6 +121,7 @@ object TastyPrinter {
   private def unpicklePkgAndClsName(in: TastyReader, names: Names): (Name, Name) = {
     import in._
     def readName(r: TastyReader = in) = names(r.readNat())
+
     def readNames(packageName: Name): (Name, Name) = readByte() match {
       case TYPEDEF    => readEnd(); (packageName, readName())
       case PACKAGE    => readEnd(); readNames(packageName)
@@ -139,6 +134,6 @@ object TastyPrinter {
   }
 
   private def nameStr(str: String)   = Console.MAGENTA + str + Console.RESET
-  private def treeStr(str: String)   = Console.YELLOW  + str + Console.RESET
-  private def lengthStr(str: String) = Console.CYAN    + str + Console.RESET
+  private def treeStr(str: String)   = Console.YELLOW + str + Console.RESET
+  private def lengthStr(str: String) = Console.CYAN + str + Console.RESET
 }

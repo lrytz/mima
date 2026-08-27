@@ -1,8 +1,9 @@
+// scalafmt: { maxColumn = 230, align.preset = more }
 package com.typesafe.tools.mima.core
 
 import java.util.UUID
 
-import scala.annotation.{nowarn, tailrec}
+import scala.annotation.{ nowarn, tailrec }
 import scala.collection.mutable, mutable.{ ArrayBuffer, ListBuffer }
 
 import TastyFormat._, NameTags._, TastyTagOps._, TastyRefs._
@@ -10,9 +11,9 @@ import TastyFormat._, NameTags._, TastyTagOps._, TastyRefs._
 object TastyUnpickler {
   def unpickleClass(in: TastyReader, clazz: ClassInfo, path: String): Unit = {
     val doPrint = false
-    //val doPrint = true
-    //val doPrint = path.contains("v1") && !path.contains("exclude.tasty")
-    //if (doPrint) TastyPrinter.printClassNames(in.fork, path)
+    // val doPrint = true
+    // val doPrint = path.contains("v1") && !path.contains("exclude.tasty")
+    // if (doPrint) TastyPrinter.printClassNames(in.fork, path)
     if (doPrint) TastyPrinter.printPickle(in.fork, path)
 
     readHeader(in)
@@ -50,6 +51,7 @@ object TastyUnpickler {
       val pkgName = pkgNames.headOption.getOrElse(nme.Empty)
       if (pkgName.source == pkgInfo.fullName) {
         val clsName0 = clsNames.reverseIterator.mkString("$")
+
         val clsName = clsNames match {
           case TypeName(ObjectName(_)) :: _ => clsName0 + "$"
           case _                            => clsName0
@@ -149,6 +151,7 @@ object TastyUnpickler {
           val end  = readEnd()
           val name = readName()
           skipTree(readByte()) // type
+
           if (!nothingButMods(end)) skipTree(readByte()) // rhs
           val (privateWithin, classPrivate, annots) = readMods(end)
           ValDef(name, privateWithin, classPrivate, annots)
@@ -160,7 +163,8 @@ object TastyUnpickler {
           val end  = readEnd()
           val name = readName()
           while (nextByte == TYPEPARAM || nextByte == PARAM || nextByte == EMPTYCLAUSE || nextByte == SPLITCLAUSE) skipTree(readByte()) // params
-          skipTree(readByte()) // returnType
+          skipTree(readByte())                                                                                                          // returnType
+
           if (!nothingButMods(end)) skipTree(readByte()) // rhs
           val (privateWithin, classPrivate, annots) = readMods(end)
           DefDef(name, privateWithin, classPrivate, annots)
@@ -175,18 +179,21 @@ object TastyUnpickler {
           // Self      = SELFDEF     selfName_NameRef selfType_Term      -- selfName : selfType
           assert(readByte() == TEMPLATE)
           val end = readEnd()
-          while (nextByte == TYPEPARAM)                                                   skipTree(readByte()) // vparams
+          while (nextByte == TYPEPARAM) skipTree(readByte())                                                   // vparams
           while (nextByte == PARAM || nextByte == EMPTYCLAUSE || nextByte == SPLITCLAUSE) skipTree(readByte()) // tparams
-          while (nextByte != SELFDEF && nextByte != DEFDEF)                               skipTree(readByte()) // parents
+          while (nextByte != SELFDEF && nextByte != DEFDEF) skipTree(readByte())                               // parents
           if (nextByte == SELFDEF) skipTree(readByte())                                                        // self
           val classes = new ListBuffer[ClsDef]
-          val fields = new ListBuffer[ValDef]
-          val meths = new ListBuffer[DefDef]
+          val fields  = new ListBuffer[ValDef]
+          val meths   = new ListBuffer[DefDef]
           doUntil(end)(readByte() match {
-            case TYPEDEF => readTypeDef() match { case clsDef: ClsDef => classes += clsDef case _ => }
-            case  VALDEF => fields += readValDef()
-            case  DEFDEF => meths  += readDefDef()
-            case tag     => skipTree(tag)
+            case TYPEDEF => readTypeDef() match {
+                case clsDef: ClsDef => classes += clsDef
+                case _              =>
+              }
+            case VALDEF => fields += readValDef()
+            case DEFDEF => meths += readDefDef()
+            case tag    => skipTree(tag)
           })
           Template(classes.toList, fields.toList, meths.toList)
         }
@@ -194,6 +201,7 @@ object TastyUnpickler {
         def readClassDef(name: Name, end: Addr) = {
           // NameRef Template Modifier* -- modifiers class name template
           val template = readTemplate()
+
           val (privateWithin, classPrivate, annots) = readMods(end)
           ClsDef(name.toTypeName, template, privateWithin, annots)
         }
@@ -204,8 +212,8 @@ object TastyUnpickler {
           //   PRIVATEqualified qualifier_Type --   private[qualifier]
           // PROTECTEDqualified qualifier_Type -- protected[qualifier]
           var privateWithin = Option.empty[Type]
-          var classPrivate = false
-          val annots = new ListBuffer[Annot]
+          var classPrivate  = false
+          val annots        = new ListBuffer[Annot]
           doUntil(end)(readByte() match {
             case ANNOTATION                => annots += readAnnot()
             case PRIVATEqualified          => privateWithin = Some(readType())
@@ -223,7 +231,7 @@ object TastyUnpickler {
           if (nextByte == TEMPLATE) readClassDef(name, end) else readTypeMemberDef(end)
         }
 
-        val end = fork.readEnd()
+        val end  = fork.readEnd()
         val tree = tag match {
           case PACKAGE => readPackage()
           case TYPEDEF => readTypeDef()
@@ -236,17 +244,17 @@ object TastyUnpickler {
       astCategory(tag) match {
         case AstCat1TagOnly => skipTree(tag)
         case AstCat2Nat     => tag match {
-          case TERMREFpkg => readTypeRefPkg()
-          case TYPEREFpkg => readTypeRefPkg()
-          case _          => skipTree(tag)
-        }
-        case AstCat3AST     => readTree()
-        case AstCat4NatAST  => tag match {
-          case TYPEREFsymbol => skipTree(tag) match { case UnknownTree(tag) => UnknownType(tag) }
-          case TYPEREF       => readTypeRef()
-          case _             => skipTree(tag)
-        }
-        case AstCat5Length  => processLengthTree()
+            case TERMREFpkg => readTypeRefPkg()
+            case TYPEREFpkg => readTypeRefPkg()
+            case _          => skipTree(tag)
+          }
+        case AstCat3AST    => readTree()
+        case AstCat4NatAST => tag match {
+            case TYPEREFsymbol => skipTree(tag) match { case UnknownTree(tag) => UnknownType(tag) }
+            case TYPEREF       => readTypeRef()
+            case _             => skipTree(tag)
+          }
+        case AstCat5Length => processLengthTree()
       }
     }
 
@@ -268,8 +276,8 @@ object TastyUnpickler {
 
   final case class UnknownTree(tag: Int) extends Tree {
     val stack = new Exception().getStackTrace
-    val id = unknownTreeId.getAndIncrement()
-    def show = s"UnknownTree(${astTagToString(tag)})" //+ s"#$id"
+    val id    = unknownTreeId.getAndIncrement()
+    def show  = s"UnknownTree(${astTagToString(tag)})" // + s"#$id"
   }
   var unknownTreeId = new java.util.concurrent.atomic.AtomicInteger()
 
@@ -278,7 +286,7 @@ object TastyUnpickler {
   final case class ClsDef(name: TypeName, template: Template, privateWithin: Option[Type], annots: List[Annot]) extends Tree {
     def show = s"${showXs(annots, end = " ")}${showPrivateWithin(privateWithin)}class $name$template"
   }
-  final case class Template(classes: List[ClsDef], fields: List[ValDef], meths: List[DefDef]) extends Tree { def show = s"${(classes ::: meths).map("\n  " + _).mkString}" }
+  final case class Template(classes: List[ClsDef], fields: List[ValDef], meths: List[DefDef])                        extends Tree { def show = s"${(classes ::: meths).map("\n  " + _).mkString}" }
   final case class ValDef(name: Name, privateWithin: Option[Type], classPrivate: Boolean, annots: List[Annot] = Nil) extends TermMemberDef
   final case class DefDef(name: Name, privateWithin: Option[Type], classPrivate: Boolean, annots: List[Annot] = Nil) extends TermMemberDef
 
@@ -288,10 +296,12 @@ object TastyUnpickler {
   }
 
   sealed trait Type extends Tree
+
   final case class UnknownType(tag: Int)           extends Type { def show = s"UnknownType(${astTagToString(tag)})" }
-  final case class TypeRef(qual: Type, name: Name) extends Type { def show = s"$qual.$name" }
+  final case class TypeRef(qual: Type, name: Name) extends Type { def show = s"$qual.$name"                         }
 
   sealed trait Path extends Type
+
   final case class UnknownPath(tag: Int)       extends Path { def show = s"UnknownPath(${astTagToString(tag)})" }
   final case class TypeRefPkg(fullyQual: Name) extends Path { def show = s"$fullyQual"                          }
 
@@ -304,14 +314,14 @@ object TastyUnpickler {
 
   sealed class Traverser {
     def traverse(tree: Tree): Unit = tree match {
-      case pkg: Pkg        => traversePkg(pkg)
-      case clsDef: ClsDef  => traverseClsDef(clsDef)
-      case tmpl: Template  => traverseTemplate(tmpl)
-      case valDef: ValDef  => traverseValDef(valDef)
-      case defDef: DefDef  => traverseDefDef(defDef)
-      case tp: Type        => traverseType(tp)
-      case annot: Annot    => traverseAnnot(annot)
-      case UnknownTree(_)  =>
+      case pkg: Pkg       => traversePkg(pkg)
+      case clsDef: ClsDef => traverseClsDef(clsDef)
+      case tmpl: Template => traverseTemplate(tmpl)
+      case valDef: ValDef => traverseValDef(valDef)
+      case defDef: DefDef => traverseDefDef(defDef)
+      case tp: Type       => traverseType(tp)
+      case annot: Annot   => traverseAnnot(annot)
+      case UnknownTree(_) =>
     }
 
     def traverseName(name: Name) = ()
@@ -323,8 +333,8 @@ object TastyUnpickler {
     def traverseDefDef(defDef: DefDef)                     = { val DefDef(name, privateWithin, _, annots) = defDef; traverseName(name); traversePrivateWithin(privateWithin); annots.foreach(traverse) }
     def traversePrivateWithin(privateWithin: Option[Type]) = { privateWithin.foreach(traverseType) }
 
-    //def traverseClassPrivate(classPrivate: Boolean)        =     { privateWithin.foreach(traverseType) }
-    def traverseAnnot(annot: Annot)                        = { val Annot(tycon, fullAnnotation) = annot; traverse(tycon); traverse(fullAnnotation) }
+    // def traverseClassPrivate(classPrivate: Boolean)        =     { privateWithin.foreach(traverseType) }
+    def traverseAnnot(annot: Annot) = { val Annot(tycon, fullAnnotation) = annot; traverse(tycon); traverse(fullAnnotation) }
 
     def traversePath(path: Path) = path match {
       case TypeRefPkg(fullyQual) => traverseName(fullyQual)
@@ -344,11 +354,13 @@ object TastyUnpickler {
 
   class FilterTraverser(p: Tree => Boolean) extends Traverser {
     val hits = mutable.ListBuffer[Tree]()
+
     override def traverse(t: Tree) = { if (p(t)) hits += t; super.traverse(t) }
   }
 
   class CollectTraverser[T](pf: PartialFunction[Tree, T]) extends Traverser {
     val results = mutable.ListBuffer[T]()
+
     override def traverse(tree: Tree): Unit = { pf.runWith(results += _)(tree); super.traverse(tree) }
   }
 
@@ -386,10 +398,12 @@ object TastyUnpickler {
     val tag = readByte()
     val end = readEnd()
 
-    def nameAtIdx(idx: Int) = try names(idx) catch {
-      case e: ArrayIndexOutOfBoundsException =>
-        throw new Exception(s"trying to read name @ idx=$idx tag=${nameTagToString(tag)}", e)
-    }
+    def nameAtIdx(idx: Int) =
+      try names(idx)
+      catch {
+        case e: ArrayIndexOutOfBoundsException =>
+          throw new Exception(s"trying to read name @ idx=$idx tag=${nameTagToString(tag)}", e)
+      }
 
     def readName() = nameAtIdx(readNat())
 
@@ -403,23 +417,23 @@ object TastyUnpickler {
     }
 
     val name = tag match {
-      case UTF8           => val start = currentAddr; goto(end); SimpleName(new String(bytes.slice(start.index, end.index), "UTF-8"))
-      case QUALIFIED      => QualifiedName(readName(),         Name.PathSep, readName().asSimpleName)
-      case EXPANDED       => QualifiedName(readName(),     Name.ExpandedSep, readName().asSimpleName)
-      case EXPANDPREFIX   => QualifiedName(readName(), Name.ExpandPrefixSep, readName().asSimpleName)
+      case UTF8         => val start = currentAddr; goto(end); SimpleName(new String(bytes.slice(start.index, end.index), "UTF-8"))
+      case QUALIFIED    => QualifiedName(readName(), Name.PathSep, readName().asSimpleName)
+      case EXPANDED     => QualifiedName(readName(), Name.ExpandedSep, readName().asSimpleName)
+      case EXPANDPREFIX => QualifiedName(readName(), Name.ExpandPrefixSep, readName().asSimpleName)
 
-      case UNIQUE         => UniqueName(sep = readName().asSimpleName, num = readNat(), qual = ifBefore(end)(readName(), Name.Empty))
-      case DEFAULTGETTER  => DefaultName(readName(), readNat())
+      case UNIQUE        => UniqueName(sep = readName().asSimpleName, num = readNat(), qual = ifBefore(end)(readName(), Name.Empty))
+      case DEFAULTGETTER => DefaultName(readName(), readNat())
 
-      case SUPERACCESSOR  => PrefixName( Name.SuperPrefix, readName())
+      case SUPERACCESSOR  => PrefixName(Name.SuperPrefix, readName())
       case INLINEACCESSOR => PrefixName(Name.InlinePrefix, readName())
       case BODYRETAINER   => SuffixName(readName(), Name.BodyRetainerSuffix)
       case OBJECTCLASS    => ObjectName(readName())
 
-      case SIGNED         => val name = readName(); readSignedRest(name, name)
-      case TARGETSIGNED   => readSignedRest(readName(), readName())
+      case SIGNED       => val name = readName(); readSignedRest(name, name)
+      case TARGETSIGNED => readSignedRest(readName(), readName())
 
-      case _              => sys.error(s"at NameRef(${names.size}): name `${readName().debug}` is qualified by tag ${nameTagToString(tag)}")
+      case _ => sys.error(s"at NameRef(${names.size}): name `${readName().debug}` is qualified by tag ${nameTagToString(tag)}")
     }
     assertEnd(end, s" bad name=${name.debug}")
     name
@@ -446,18 +460,15 @@ object TastyUnpickler {
     final def show = source
   }
 
-  final case class SimpleName(raw: String)                                                   extends Name
-  final case class ObjectName(base: Name)                                                    extends Name
+  final case class SimpleName(raw: String) extends Name
+  final case class ObjectName(base: Name)  extends Name
   @nowarn("msg=constructor modifiers are assumed by synthetic")
   final case class TypeName private[TastyUnpickler] (base: Name)                             extends Name
   final case class QualifiedName(qual: Name, sep: SimpleName, sel: SimpleName)               extends Name
-
   final case class UniqueName(qual: Name, sep: SimpleName, num: Int)                         extends Name
   final case class DefaultName(qual: Name, num: Int)                                         extends Name
-
   final case class PrefixName(pref: SimpleName, qual: Name)                                  extends Name
   final case class SuffixName(qual: Name, suff: SimpleName)                                  extends Name
-
   final case class SignedName(qual: Name, sig: MethodSignature[ErasedTypeRef], target: Name) extends Name
 
   object Name {
@@ -562,10 +573,10 @@ object TastyUnpickler {
   }
 
   final case class Header(
-    header: (Int, Int, Int, Int),
-    version: (Int, Int, Int),
-    toolingVersion: String,
-    uuid: UUID,
+      header: (Int, Int, Int, Int),
+      version: (Int, Int, Int),
+      toolingVersion: String,
+      uuid: UUID,
   )
 
   def readHeader(in: TastyReader): Header = {
@@ -573,16 +584,17 @@ object TastyUnpickler {
 
     def readToolingVersion() = {
       val toolingLen = readNat()
+
       val toolingVersion = new String(bytes, currentAddr.index, toolingLen)
       goto(currentAddr + toolingLen)
       toolingVersion
     }
 
     Header(
-      header         = (readByte(), readByte(), readByte(), readByte()),
-      version        = (readNat(), readNat(), readNat()),
+      header = (readByte(), readByte(), readByte(), readByte()),
+      version = (readNat(), readNat(), readNat()),
       toolingVersion = readToolingVersion(),
-      uuid           = new UUID(readUncompressedLong(), readUncompressedLong()),
+      uuid = new UUID(readUncompressedLong(), readUncompressedLong()),
     )
   }
 

@@ -1,3 +1,4 @@
+// scalafmt: { align.preset = none  }
 package com.typesafe.tools.mima.lib.analyze.template
 
 import com.typesafe.tools.mima.core._

@@ -1,3 +1,4 @@
+// scalafmt: { spaces.afterSymbolicDefs = true }
 package com.typesafe.tools.mima
 package plugin
 
@@ -12,7 +13,7 @@ object PluginCompat {
   }
 
   // Used to differentiate unset mimaPreviousArtifacts from empty mimaPreviousArtifacts
-  private[plugin] object NoPreviousArtifacts extends EmptySet[ModuleID]
+  private[plugin] object NoPreviousArtifacts  extends EmptySet[ModuleID]
   private[plugin] object NoPreviousClassfiles extends EmptyMap[ModuleID, File]
 
   private[plugin] sealed class EmptySet[A] extends Set[A] {
@@ -20,6 +21,7 @@ object PluginCompat {
     def contains(elem: A) = false
     def + (elem: A)       = Set(elem)
     def - (elem: A)       = this
+
     override def size                  = 0
     override def foreach[U](f: A => U) = ()
     override def toSet[B >: A]: Set[B] = this.asInstanceOf[Set[B]]

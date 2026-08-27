@@ -6,10 +6,12 @@ private[mima] object ProblemReporting {
   val versionOrdering: Ordering[String] = {
     // version string "x.y.z" is converted to a Long tuple (x, y, z) for comparison
     val VersionRegex = """(\d+)\.?(\d+)?\.?(.*)?""".r
+
     def long(versionPart: String) =
       Try(versionPart.replace("x", Long.MaxValue.toString).filter(_.isDigit).toLong).getOrElse(0L)
     Ordering[(Long, Long, Long)].on[String] {
       case VersionRegex(x, y, z) => (long(x), long(y), long(z))
+
       case bad => throw new IllegalArgumentException(bad)
     }
   }

@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 160 }
 package com.typesafe.tools.mima.core
 
 import com.typesafe.tools.mima.core.PickleFormat.*
@@ -7,7 +8,7 @@ object MimaUnpickler {
     if (buf.bytes.length == 0) return
 
     val doPrint = false
-    //val doPrint = path.contains("v1") && !path.contains("exclude.class")
+    // val doPrint = path.contains("v1") && !path.contains("exclude.class")
     if (doPrint) {
       println(s"unpickling $path")
       PicklePrinter.printPickle(buf)
@@ -18,7 +19,7 @@ object MimaUnpickler {
     val index    = buf.createIndex
     val entries  = new Array[Entry](index.length)
     val classes  = new scala.collection.mutable.HashMap[SymInfo, ClassInfo]
-    def     syms = entries.iterator.collect { case s: SymbolInfo => s }
+    def syms     = entries.iterator.collect { case s: SymbolInfo => s }
     def defnSyms = syms.filter(sym => sym.tag == CLASSsym || sym.tag == MODULEsym)
     def methSyms = syms.filter(sym => sym.tag == VALsym)
 
@@ -59,13 +60,13 @@ object MimaUnpickler {
     }
 
     def readSym(tag: Int): SymInfo = tag match {
-      case   NONEsym      => readSymbol(tag)
-      case   TYPEsym      => readSymbol(tag)
-      case  ALIASsym      => readSymbol(tag)
-      case  CLASSsym      => readSymbol(tag) // CLASSsym len_Nat SymbolInfo [thistype_Ref]
+      case NONEsym        => readSymbol(tag)
+      case TYPEsym        => readSymbol(tag)
+      case ALIASsym       => readSymbol(tag)
+      case CLASSsym       => readSymbol(tag) // CLASSsym len_Nat SymbolInfo [thistype_Ref]
       case MODULEsym      => readSymbol(tag)
-      case    VALsym      => readSymbol(tag)
-      case         EXTref => readExt(tag)
+      case VALsym         => readSymbol(tag)
+      case EXTref         => readExt(tag)
       case EXTMODCLASSref => readExt(tag)
       case tag            => sys.error(s"Unexpected tag ${tag2string(tag)}")
     }
@@ -80,6 +81,7 @@ object MimaUnpickler {
       val name  = readNameRef()
       val owner = readSymRef()
       val flags = buf.readLongNat()
+
       val (privateWithin, info) = buf.readNat() match {
         case info if buf.readIndex == end => (-1, info)
         case privateWithin                => (privateWithin, buf.readNat())
@@ -106,7 +108,7 @@ object MimaUnpickler {
       val tag = buf.readByte()
       val end = readEnd()
       tag match {
-        case    THIStpe => ThisTypeInfo(readSymRef())
+        case THIStpe    => ThisTypeInfo(readSymRef())
         case TYPEREFtpe => TypeRefInfo(readTypeRef(), readSymRef(), until(end, () => readTypeRef()))
         case _          => UnknownType(tag)
       }
@@ -125,12 +127,12 @@ object MimaUnpickler {
     def readEntry() = {
       val tag = buf.readByte()
       tag match {
-        case   NONEsym => readSymbol(tag)
-        case   TYPEsym => readSymbol(tag)
-        case  ALIASsym => readSymbol(tag)
-        case  CLASSsym => readSymbol(tag)
+        case NONEsym   => readSymbol(tag)
+        case TYPEsym   => readSymbol(tag)
+        case ALIASsym  => readSymbol(tag)
+        case CLASSsym  => readSymbol(tag)
         case MODULEsym => readSymbol(tag)
-        case    VALsym => readSymbol(tag)
+        case VALsym    => readSymbol(tag)
         case SYMANNOT  => readSymbolAnnotation()
         case _         => buf.readIndex = readEnd(); UnknownEntry(tag)
       }
@@ -154,6 +156,7 @@ object MimaUnpickler {
         NoClass
       } else {
         val fallback = if (symbolInfo.isModuleOrModuleClass) clazz.moduleClass else clazz
+
         def lookup(cls: ClassInfo) = {
           val clsName   = cls.bytecodeName
           val separator = if (clsName.endsWith("$")) "" else "$"
@@ -235,6 +238,7 @@ object MimaUnpickler {
   final case class UnknownEntry(tag: Int) extends Entry
 
   sealed trait Name extends Entry { def tag: Int; def value: String }
+
   final case class TermName(value: String) extends Name { def tag = TERMname }
   final case class TypeName(value: String) extends Name { def tag = TYPEname }
 
@@ -269,21 +273,21 @@ object MimaUnpickler {
   final case class ExtInfo(tag: Int, name: Name, owner: SymInfo) extends SymInfo
 
   sealed trait TypeInfo extends Entry
+
   final case class UnknownType(tag: Int) extends TypeInfo
 
   final case class ThisTypeInfo(sym: SymInfo)                                      extends TypeInfo
   final case class TypeRefInfo(tpe: TypeInfo, sym: SymInfo, targs: List[TypeInfo]) extends TypeInfo
-
   final case class SymAnnotInfo(sym: SymbolInfo, tpe: TypeInfo)                    extends Entry
 
   def readNat(data: Array[Byte]): Int = {
     var idx = 0
     var res = 0L
     var b   = 0L
-    while({
-      b    = data(idx).toLong
+    while ({
+      b = data(idx).toLong
       idx += 1
-      res  = (res << 7) + (b & 0x7f)
+      res = (res << 7) + (b & 0x7f)
       (b & 0x80) != 0L
     }) ()
     res.toInt

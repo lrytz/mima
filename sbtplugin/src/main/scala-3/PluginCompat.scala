@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 150 }
 package com.typesafe.tools.mima
 package plugin
 
@@ -9,7 +10,7 @@ object PluginCompat:
     cp.map(_.map(x => conv.toPath(x).toFile))
 
   // Used to differentiate unset mimaPreviousArtifacts from empty mimaPreviousArtifacts
-  private[plugin] object NoPreviousArtifacts extends EmptySet[ModuleID]
+  private[plugin] object NoPreviousArtifacts  extends EmptySet[ModuleID]
   private[plugin] object NoPreviousClassfiles extends EmptyMap[ModuleID, File]
 
   private[plugin] sealed class EmptySet[A] extends Set[A]:
@@ -23,9 +24,9 @@ object PluginCompat:
     override def toSet[B >: A]: Set[B] = this.asInstanceOf[Set[B]]
 
   private[plugin] sealed class EmptyMap[K, V] extends Map[K, V]:
-    def get(key: K)              = None
-    def iterator                 = Iterator.empty
-    def removed(key: K)          = this
+    def get(key: K)     = None
+    def iterator        = Iterator.empty
+    def removed(key: K) = this
 
     override def size                                       = 0
     override def contains(key: K)                           = false

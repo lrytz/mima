@@ -54,7 +54,7 @@ private[mima] final class Definitions(val classPath: ClassPath) {
     }
 
     def newClassType: ClassType = {
-      val end = descriptor.indexOf(';', in)
+      val end      = descriptor.indexOf(';', in)
       val fullName = descriptor.substring(in, end).replace('/', '.')
       in = end + 1
       ClassType(fromName(fullName))

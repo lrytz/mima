@@ -1,3 +1,4 @@
+// scalafmt: { align.preset = some, spaces.inImportCurlyBraces = false  }
 package com.typesafe.tools.mima.lib
 
 import java.io.File
@@ -16,15 +17,15 @@ object CollectProblemsTest {
     () <- collectAndDiff(cp = Nil, v1.jfile, v2.jfile)(
       expected,
       excludeAnnots = excludeAnnots,
-      direction     = direction,
+      direction = direction,
     )
   } yield ()
 
   def collectAndDiff(cp: Seq[File], v1: File, v2: File)(
-      expected: List[String]              = Nil,
+      expected: List[String] = Nil,
       problemFilters: List[ProblemFilter] = Nil,
-      excludeAnnots: List[String]         = Nil,
-      direction: Direction                = Backwards,
+      excludeAnnots: List[String] = Nil,
+      direction: Direction = Backwards,
   ): Try[Unit] = {
     val problems = new MiMaLib(cp).collectProblems(v1, v2, excludeAnnots).filter(problemFilters.foldAll)
     val affectedVersion = direction match {

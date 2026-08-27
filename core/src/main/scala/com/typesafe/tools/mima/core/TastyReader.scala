@@ -24,7 +24,8 @@ final class TastyReader(val bytes: Array[Byte], start: Int, end: Int, val base: 
   def readAddr(): Addr       = Addr(readNat())      // Read a natural number and return as an address
   def readEnd(): Addr        = addr(readNat() + bp) // Read a length number and return the absolute end address implied by it, given as (address following length field) + (length-value-read)
   def goto(addr: Addr): Unit = bp = index(addr)     // Set read position to the one pointed to by `addr`
-  def readByte(): Int        = { val b = nextByte; bp += 1; b } // Read a byte of data
+
+  def readByte(): Int = { val b = nextByte; bp += 1; b } // Read a byte of data
 
   /** Read the next `n` bytes of `data`. */
   def readBytes(n: Int): Array[Byte] = {
@@ -50,6 +51,7 @@ final class TastyReader(val bytes: Array[Byte], start: Int, end: Int, val base: 
   /** Read a long integer number in 2's complement big endian format, base 128. */
   def readLongInt(): Long = {
     var b = bytes(bp)
+
     var x: Long = (b << 1).toByte >> 1 // sign extend with bit 6.
     bp += 1
     while ((b & 0x80) == 0) {
@@ -92,6 +94,7 @@ final class TastyReader(val bytes: Array[Byte], start: Int, end: Int, val base: 
 
   def assertSoft(cond: Boolean, msg: => String)  = if (!cond) println(msg)
   def assertShort(cond: Boolean, msg: => String) = if (!cond) shortExc(s"$msg")
+
   def shortExc(msg: String) = throw new Exception(msg, null, false, false) {}
 
   /** If before given `end` address, the result of `op`, otherwise `default` */

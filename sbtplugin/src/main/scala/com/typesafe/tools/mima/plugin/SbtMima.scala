@@ -1,3 +1,4 @@
+// scalafmt: { maxColumn = 200, align.preset = some }
 package com.typesafe.tools.mima
 package plugin
 
@@ -24,16 +25,17 @@ object SbtMima {
     def checkBC = mimaLib.collectProblems(prev, curr, excludeAnnots)
     def checkFC = mimaLib.collectProblems(curr, prev, excludeAnnots)
     dir match {
-       case "backward" | "backwards" => (checkBC, Nil)
-       case "forward" | "forwards"   => (Nil, checkFC)
-       case "both"                   => (checkBC, checkFC)
-       case _                        => (Nil, Nil)
+      case "backward" | "backwards" => (checkBC, Nil)
+      case "forward" | "forwards"   => (Nil, checkFC)
+      case "both"                   => (checkBC, checkFC)
+      case _                        => (Nil, Nil)
     }
   }
 
   private def sanityCheckScalaVersion(scalaVersion: String) = {
     scalaBinaryVersion(scalaVersion) match {
       case "2.11" | "2.12" | "2.13" | "3" => () // ok
+
       case _ => throw new IllegalArgumentException(s"MiMa supports Scala 2.11, 2.12, 2.13 and 3, not $scalaVersion")
     }
   }
@@ -133,7 +135,8 @@ object SbtMima {
         } {
           text match {
             case ExclusionPattern(className, target) =>
-              try filters += ProblemFilters.exclude(className, target) catch {
+              try filters += ProblemFilters.exclude(className, target)
+              catch {
                 case NonFatal(t) => failures += s"Error while parsing $file, line $line: ${t.getMessage}"
               }
             case _ => failures += s"Couldn't parse $file, line $line: '$text'"

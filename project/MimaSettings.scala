@@ -12,9 +12,9 @@ object MimaSettings {
   // clear out mimaBinaryIssueFilters when changing this
   val mimaPreviousVersion = "1.1.6"
 
-  val mimaSettings = Def.settings (
-    mimaPreviousArtifacts := Set(pluginProjectID.value.withRevision(mimaPreviousVersion)
-      .withExplicitArtifacts(Vector()) // defaultProjectID uses artifacts.value which breaks it =/
+  val mimaSettings = Def.settings(
+    mimaPreviousArtifacts := Set( // defaultProjectID uses artifacts.value which breaks it =/
+      pluginProjectID.value.withRevision(mimaPreviousVersion).withExplicitArtifacts(Vector())
     ),
     mimaReportSignatureProblems := true,
     mimaBinaryIssueFilters ++= Seq(
