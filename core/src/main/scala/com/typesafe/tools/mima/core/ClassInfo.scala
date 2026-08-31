@@ -59,6 +59,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final var _fields: Members[FieldInfo]   = NoMembers
   final var _methods: Members[MethodInfo] = NoMembers
   final var _flags: Int                   = 0
+  final var _signature: Signature         = Signature.none
   final var _scopedPrivate: Boolean       = false
   final var _sealed: Boolean              = false
   final var _annotations: List[AnnotInfo] = Nil
@@ -77,6 +78,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def fields: Members[FieldInfo]   = afterLoading(_fields)
   final def methods: Members[MethodInfo] = afterLoading(_methods)
   final def flags: Int                   = afterLoading(_flags)
+  final def signature: Signature         = afterLoading(_signature)
   // an object's private[foo] mark arrives with the pickle of one of its two classfiles, so load both
   final def isScopedPrivate: Boolean     = { module.forceLoad; moduleClass.forceLoad; afterLoading(_scopedPrivate) }
   final def isSealed: Boolean            = afterLoading(_sealed)

@@ -1,2 +1,0 @@
-foo.C escapes through the class signature of foo.P, which mima does not
-read, so it names nothing and the app dies on C.bar(Int).

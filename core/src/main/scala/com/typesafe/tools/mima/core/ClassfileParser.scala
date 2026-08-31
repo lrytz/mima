@@ -57,6 +57,7 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
       case ScalaSignatureATTR    => isScala = true
       case EnclosingMethodATTR   => clazz._isLocalClass = true
       case InnerClassesATTR      => clazz._innerClasses = parseInnerClasses(clazz)
+      case SignatureATTR         => clazz._signature = Signature(pool.getName(in.nextChar))
       case TASTYATTR             => parseTasty(clazz)
       case _                     =>
     }
