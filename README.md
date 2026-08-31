@@ -195,6 +195,16 @@ private[foo] class C { def bar(x: Int) = x }
 object Lib { def go: C = new C }   // any client can now call go().bar(1)
 ```
 
+To answer for one definition rather than all of them, a filter can ask the same
+question, because `Problem.isExternallyAccessible` tells you whether a client
+can name what the problem is about:
+
+```scala
+import com.typesafe.tools.mima.core._
+
+mimaBinaryIssueFilters += { (p: Problem) => p.isExternallyAccessible }
+```
+
 ### Annotation-based exclusions
 
 The `mimaExcludeAnnotations` setting can be used to tell MiMa to

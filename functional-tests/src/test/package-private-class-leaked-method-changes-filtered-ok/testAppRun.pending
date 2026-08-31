@@ -1,0 +1,2 @@
+the filter drops the report, and the app calls C.bar(Int) through the
+value Lib.go returns, so it breaks.
