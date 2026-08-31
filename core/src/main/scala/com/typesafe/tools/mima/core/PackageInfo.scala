@@ -124,7 +124,7 @@ sealed abstract class PackageInfo {
     val found = Set.newBuilder[ClassInfo]
 
     val allAccessibleClasses = classes.valuesIterator.filter { clazz =>
-      clazz.isPublic && !clazz.isLocalClass && !clazz.isSynthetic
+      clazz.isChecked && !clazz.isLocalClass && !clazz.isSynthetic
     }.toSet
 
     @tailrec def loop(isReachable: ClassInfo => Boolean): Set[ClassInfo] = {

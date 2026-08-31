@@ -77,7 +77,8 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def fields: Members[FieldInfo]   = afterLoading(_fields)
   final def methods: Members[MethodInfo] = afterLoading(_methods)
   final def flags: Int                   = afterLoading(_flags)
-  final def isScopedPrivate: Boolean     = afterLoading(_scopedPrivate)
+  // an object's private[foo] mark arrives with the pickle of one of its two classfiles, so load both
+  final def isScopedPrivate: Boolean     = { module.forceLoad; moduleClass.forceLoad; afterLoading(_scopedPrivate) }
   final def isSealed: Boolean            = afterLoading(_sealed)
   final def annotations: List[AnnotInfo] = afterLoading(_annotations)
   final def implClass: ClassInfo         = { owner.setImplClasses; _implClass } // returns NoClass if this is not a trait
@@ -114,6 +115,11 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
 
   // the private[Outer] mark on a nested class arrives with the pickle of Outer, so ask the outermost first
   private[mima] def isExternallyAccessible: Boolean = outerChain.toList.reverseIterator.forall(_.isDirectlyAccessible)
+
+  /** Whether mima checks this class: a client outside the scope can name it, or holds
+   *  one all the same because a public method returns it. */
+  private[mima] def isChecked: Boolean =
+    isExternallyAccessible || outerChain.exists(owner.root.escapedClasses)
 
   lazy val outer: ClassInfo = {
     val idx = bytecodeName.stripSuffix("$").lastIndexOf('$')

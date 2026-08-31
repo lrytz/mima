@@ -1,0 +1,2 @@
+Lib.foo is public and holds a Foo, so mima reports bar changing. The app
+calls only Lib.doIt, so it runs.

@@ -181,6 +181,20 @@ import com.typesafe.tools.mima.plugin.MimaKeys._
 ThisBuild / mimaReportSignatureProblems := true
 ```
 
+### Qualified private definitions
+
+MiMa passes over a qualified-private *member*, such as `private[foo] def`,
+because no client outside `foo` can name it. It reports a qualified-private
+*class*, and the public members and nested classes inside it, only where a
+client can reach one: a public method returns it, a public field holds it, or
+a public class extends it.
+
+```scala
+package foo
+private[foo] class C { def bar(x: Int) = x }
+object Lib { def go: C = new C }   // any client can now call go().bar(1)
+```
+
 ### Annotation-based exclusions
 
 The `mimaExcludeAnnotations` setting can be used to tell MiMa to
