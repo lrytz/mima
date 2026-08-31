@@ -110,6 +110,11 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   private[mima] def isClosedHierarchy: Boolean = isSealed &&
     owner.root.subtypes.getOrElse(this, Set.empty).forall(_.isClosed)
 
+  private[mima] def isDirectlyAccessible: Boolean = isPublic && !isScopedPrivate
+
+  // the private[Outer] mark on a nested class arrives with the pickle of Outer, so ask the outermost first
+  private[mima] def isExternallyAccessible: Boolean = outerChain.toList.reverseIterator.forall(_.isDirectlyAccessible)
+
   lazy val outer: ClassInfo = {
     val idx = bytecodeName.stripSuffix("$").lastIndexOf('$')
     if (idx != -1) {
