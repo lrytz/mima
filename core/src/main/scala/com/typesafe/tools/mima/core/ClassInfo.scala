@@ -60,6 +60,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final var _methods: Members[MethodInfo] = NoMembers
   final var _flags: Int                   = 0
   final var _scopedPrivate: Boolean       = false
+  final var _sealed: Boolean              = false
   final var _annotations: List[AnnotInfo] = Nil
   final var _implClass: ClassInfo         = NoClass
   final var _moduleClass: ClassInfo       = NoClass
@@ -77,6 +78,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def methods: Members[MethodInfo] = afterLoading(_methods)
   final def flags: Int                   = afterLoading(_flags)
   final def isScopedPrivate: Boolean     = afterLoading(_scopedPrivate)
+  final def isSealed: Boolean            = afterLoading(_sealed)
   final def annotations: List[AnnotInfo] = afterLoading(_annotations)
   final def implClass: ClassInfo         = { owner.setImplClasses; _implClass } // returns NoClass if this is not a trait
   final def moduleClass: ClassInfo       = { owner.setModules; if (_moduleClass == NoClass || _moduleClass == null) this else _moduleClass }
@@ -96,6 +98,17 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def classString: String       = s"$accessModifier $description".trim
 
   def outerChain: Iterator[ClassInfo] = Iterator.iterate(this)(_.outer).takeWhile(_ != NoClass)
+
+  /** Nothing outside this library can extend it. */
+  private[mima] def isClosed: Boolean = isFinal || isSealed
+
+  /** No client can extend this class, and none can extend its subtypes.
+   *
+   *  This tests isSealed, not isClosed. A final class has no deferred methods, so
+   *  MethodChecker.checkNew reports nothing about it. mima also never builds
+   *  PackageInfo.subtypes for a library that seals nothing. */
+  private[mima] def isClosedHierarchy: Boolean = isSealed &&
+    owner.root.subtypes.getOrElse(this, Set.empty).forall(_.isClosed)
 
   lazy val outer: ClassInfo = {
     val idx = bytecodeName.stripSuffix("$").lastIndexOf('$')

@@ -1,0 +1,2 @@
+mima stays silent because every Scala subtype of foo.T is closed, but
+javac ignores sealed, so the Java client implements foo.T and dies on b().

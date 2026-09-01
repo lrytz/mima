@@ -1,0 +1,2 @@
+mima names the new abstract method, and the app never extends Open, so it
+runs.

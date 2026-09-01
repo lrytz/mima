@@ -14,6 +14,8 @@ private[analyze] object MethodChecker {
 
   /** Analyze incompatibilities that may derive from new methods in `newclazz`. */
   private def checkNew(oldclazz: ClassInfo, newclazz: ClassInfo, excludeAnnots: List[AnnotInfo]): List[Problem] = {
+    // these problems break a client that implements oldclazz, and nobody outside can
+    if (oldclazz.isClosedHierarchy) return Nil
     val problems1 = if (newclazz.isClass) Nil else checkEmulatedConcreteMethodsProblems(oldclazz, newclazz)
     val problems2 = checkDeferredMethodsProblems(oldclazz, newclazz, excludeAnnots)
     val problems3 = checkInheritedNewAbstractMethodProblems(oldclazz, newclazz, excludeAnnots)

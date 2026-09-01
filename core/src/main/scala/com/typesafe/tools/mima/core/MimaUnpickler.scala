@@ -206,7 +206,10 @@ object MimaUnpickler {
 
     for (clsSym <- defnSyms) {
       val cls = classes(clsSym)
-      if (clsSym.isScopedPrivate && cls != NoClass) cls.module._scopedPrivate = true
+      if (cls != NoClass) {
+        if (clsSym.isSealed) cls._sealed = true
+        if (clsSym.isScopedPrivate) cls.module._scopedPrivate = true
+      }
       doMethods(cls, methSyms.filter(_.owner == clsSym).toList)
     }
 
@@ -267,6 +270,7 @@ object MimaUnpickler {
     def isModuleOrModuleClass        = hasFlag(Flags.MODULE_PKL)
     def isParam                      = hasFlag(Flags.PARAM)
     def isClassPrivate               = hasFlag(Flags.PRIVATE)
+    def isSealed                     = hasFlag(Flags.SEALED)
   }
   val NoSymbol: SymbolInfo = SymbolInfo(NONEsym, nme.NoSymbol, null, 0, false)
 
@@ -295,6 +299,7 @@ object MimaUnpickler {
 
   object Flags {
     final val PRIVATE    = 1L << 2
+    final val SEALED     = 1L << 4
     final val MODULE_PKL = 1L << 10
     final val PARAM      = 1L << 13
   }

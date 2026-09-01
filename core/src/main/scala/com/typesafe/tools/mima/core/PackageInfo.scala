@@ -69,6 +69,23 @@ sealed abstract class PackageInfo {
     case _: SyntheticPackageInfo         => false
   }
 
+  @tailrec
+  final def root: PackageInfo = if (isRoot) this else owner.root
+
+  private def classesInTree: Iterator[ClassInfo] =
+    classes.valuesIterator ++ packages.valuesIterator.flatMap(_.classesInTree)
+
+  /** What extends a class, directly or through others, for every class in this tree. */
+  final lazy val subtypes: collection.Map[ClassInfo, collection.Set[ClassInfo]] = {
+    val res = new mutable.HashMap[ClassInfo, mutable.HashSet[ClassInfo]]
+    classesInTree.foreach { clazz =>
+      (clazz.superClasses.iterator ++ clazz.allInterfaces.iterator).foreach { parent =>
+        res.getOrElseUpdate(parent, new mutable.HashSet[ClassInfo]) += clazz
+      }
+    }
+    res
+  }
+
   final lazy val accessibleClasses: Set[ClassInfo] = {
     @tailrec def loop(found: Set[ClassInfo], prefix: Set[ClassInfo]): Set[ClassInfo] = {
       val accessibleClasses = classes.valuesIterator.filter(isAccessible(_, prefix)).toSet
