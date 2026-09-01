@@ -1,0 +1,10 @@
+A client that declares package foo of its own can name foo.Open and extend
+it, and this app does. mima counts foo.Open as closed, because a client
+outside foo cannot name it, so it reports nothing and the app dies.
+
+Arguably it should report: the client is legal Scala. mima does not protect
+that client anywhere else either, see
+package-private-method-changes-same-package-app-ok, where a changed
+private[foo] method goes unreported and the same app dies. Reporting here
+and not there would be the worse inconsistency, so this waits for a
+decision about qualified private as a whole.

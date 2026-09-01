@@ -1,2 +1,0 @@
-foo.T is sealed and foo.Open is qualified private, so nothing outside foo
-can implement T and take this break; the app runs.

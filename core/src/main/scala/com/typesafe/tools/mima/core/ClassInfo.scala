@@ -103,7 +103,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   def outerChain: Iterator[ClassInfo] = Iterator.iterate(this)(_.outer).takeWhile(_ != NoClass)
 
   /** Nothing outside this library can extend it. */
-  private[mima] def isClosed: Boolean = isFinal || isSealed
+  private[mima] def isClosed: Boolean = isFinal || isSealed || !isExternallyAccessible
 
   /** No client can extend this class, and none can extend its subtypes.
    *
