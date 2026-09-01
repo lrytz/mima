@@ -20,6 +20,16 @@ sealed abstract class Problem extends ProblemRef {
     case p: MemberProblem   => Some(p.ref.fullName)
   }
 
+  /** Whether a client outside the library can name what this problem is about.
+   *
+   *  It is false for a definition that only Scala keeps private, such as
+   *  private[foo], and a filter can drop those problems by asking this.
+   */
+  final def isExternallyAccessible: Boolean = this match {
+    case p: TemplateProblem => p.ref.isExternallyAccessible
+    case p: MemberProblem   => p.ref.isExternallyAccessible
+  }
+
   /** 'affectedVersion' is "current" for bincompat, "other" or "previous" for forward-compat. */
   final def description: String => String = getDescription(_)
 

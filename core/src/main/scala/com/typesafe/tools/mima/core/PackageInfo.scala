@@ -86,22 +86,58 @@ sealed abstract class PackageInfo {
     res
   }
 
+  /** The qualified private classes a client outside their scope can still reach.
+   *
+   *  A public method returns one, a public field holds one, a public class extends one.
+   *  The client never names the type and calls the public members all the same, and it
+   *  reaches the public members and nested classes of that class in turn, so this is a
+   *  fixed point.
+   */
+  final lazy val escapedClasses: collection.Set[ClassInfo] = {
+    val escaped = mutable.Set.empty[ClassInfo]
+    val queue   = mutable.Queue.empty[ClassInfo]
+
+    def enqueue(clazz: ClassInfo): Unit =
+      if (clazz != NoClass && !clazz.isExternallyAccessible && escaped.add(clazz)) queue.enqueue(clazz)
+    def enqueueAll(classes: Iterator[ClassInfo]): Unit =
+      classes.foreach(enqueue)
+
+    def exposes(clazz: ClassInfo): Unit = {
+      (clazz.methods.value.iterator ++ clazz.fields.value.iterator).foreach { m =>
+        if (!m.nonAccessible) {
+          enqueueAll(m.tpe.classes)
+          enqueueAll(m.signature.classNames.map(clazz.owner.definitions.fromName))
+        }
+      }
+      enqueueAll(clazz.signature.classNames.map(clazz.owner.definitions.fromName))
+      enqueue(clazz.superClass)
+      enqueueAll(clazz.interfaces.iterator)
+      clazz.innerClasses.foreach(clazz.owner.classes.get(_).foreach(enqueue))
+    }
+
+    classesInTree.foreach { c => if (c.isExternallyAccessible) exposes(c) }
+    while (queue.nonEmpty) exposes(queue.dequeue())
+
+    escaped
+  }
+
   final lazy val accessibleClasses: Set[ClassInfo] = {
-    @tailrec def loop(found: Set[ClassInfo], prefix: Set[ClassInfo]): Set[ClassInfo] = {
-      val accessibleClasses = classes.valuesIterator.filter(isAccessible(_, prefix)).toSet
-      if (accessibleClasses.isEmpty) found
-      else loop(accessibleClasses ++ found, accessibleClasses)
+    val found = Set.newBuilder[ClassInfo]
+
+    val allAccessibleClasses = classes.valuesIterator.filter { clazz =>
+      clazz.isChecked && !clazz.isLocalClass && !clazz.isSynthetic
+    }.toSet
+
+    @tailrec def loop(isReachable: ClassInfo => Boolean): Set[ClassInfo] = {
+      val reachableClasses = allAccessibleClasses.filter(isReachable)
+      if (reachableClasses.isEmpty) found.result()
+      else {
+        found ++= reachableClasses
+        loop(clazz => reachableClasses.exists(_.innerClasses.contains(clazz.bytecodeName)))
+      }
     }
 
-    def isAccessible(clazz: ClassInfo, prefix: Set[ClassInfo]) =
-      clazz.isPublic && !clazz.isLocalClass && !clazz.isSynthetic && isReachable(clazz, prefix)
-
-    def isReachable(clazz: ClassInfo, prefix: Set[ClassInfo]) = {
-      if (prefix.isEmpty) clazz.isTopLevel && !clazz.decodedName.contains("$$")
-      else prefix.exists(_.innerClasses.contains(clazz.bytecodeName))
-    }
-
-    loop(Set.empty, Set.empty)
+    loop(clazz => clazz.isTopLevel && !clazz.decodedName.contains("$$"))
   }
 
   // Used to make sure trait classes have their impl class field set

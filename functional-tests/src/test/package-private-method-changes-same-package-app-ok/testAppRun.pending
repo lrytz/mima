@@ -1,0 +1,2 @@
+mima passes over the private[foo] method, but the app declares package foo
+of its own, so it calls bar(Int) and dies.

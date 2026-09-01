@@ -25,6 +25,8 @@ sealed abstract class MemberInfo(val owner: ClassInfo, val bytecodeName: String,
     case info: FieldInfo  => info.fieldString
     case info: MethodInfo => info.methodString
   }
+
+  private[mima] def isExternallyAccessible: Boolean = !scopedPrivate && owner.isExternallyAccessible
 }
 
 private[mima] final class FieldInfo(owner: ClassInfo, bytecodeName: String, flags: Int, descriptor: String)

@@ -15,6 +15,13 @@ private[core] object Type {
 private[core] sealed abstract class Type {
   def resultType: Type = throw new UnsupportedOperationException
 
+  final def classes: Iterator[ClassInfo] = this match {
+    case ValueType(_)                   => Iterator.empty
+    case ClassType(clazz)               => Iterator.single(clazz)
+    case ArrayType(elemType)            => elemType.classes
+    case MethodType(paramTypes, resTpe) => paramTypes.iterator.flatMap(_.classes) ++ resTpe.classes
+  }
+
   final override def toString = this match {
     case ValueType(name)                => name
     case ClassType(clazz)               => ClassInfo.formatClassName(clazz.fullName) // formattedFullName?

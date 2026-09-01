@@ -5,6 +5,10 @@ import scala.annotation.tailrec
 class Signature(private val signature: String) {
   import Signature._
 
+  /** The classes this signature names, including the ones erasure drops from a descriptor. */
+  private[core] def classNames: Iterator[String] =
+    classNameRe.findAllMatchIn(signature).map(_.group(1).replace('/', '.'))
+
   lazy val canonicalized = {
     signature.headOption match {
       case None | Some('(') => signature
@@ -47,6 +51,9 @@ class Signature(private val signature: String) {
 }
 
 object Signature {
+  // javac's Louter<T>.Inner; form yields only the outer; a nested class is reached through innerClasses
+  private val classNameRe = "L([^<>;]+)[<;]".r
+
   def apply(signature: String): Signature = new Signature(signature)
 
   val none = Signature("")

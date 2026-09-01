@@ -4,7 +4,7 @@ package com.typesafe.tools.mima.lib
 import java.io.File
 import java.nio.file.Files
 
-import com.typesafe.tools.mima.core.ProblemFilter
+import com.typesafe.tools.mima.core.{Problem, ProblemFilter}
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -18,6 +18,8 @@ object CollectProblemsTest {
       expected,
       excludeAnnots = excludeAnnots,
       direction = direction,
+      problemFilters =
+        if (testCase.versionedFile("filterInaccessible").exists) List(filterInaccessible) else Nil,
     )
   } yield ()
 
@@ -64,6 +66,9 @@ object CollectProblemsTest {
   }
 
   private val excludeAnnots = List("mima.annotation.exclude")
+
+  /** What a build writes to keep mima quiet about what no client can name. */
+  private val filterInaccessible: ProblemFilter = (p: Problem) => p.isExternallyAccessible
 
   implicit class PredicatesOps[A](private val ps: Iterable[A => Boolean]) extends AnyVal {
     def foldAll: A => Boolean = (x: A) => ps.forall(p => p(x))

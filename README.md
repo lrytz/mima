@@ -181,6 +181,50 @@ import com.typesafe.tools.mima.plugin.MimaKeys._
 ThisBuild / mimaReportSignatureProblems := true
 ```
 
+### Qualified private definitions
+
+`private[foo]` is a Scala rule, not a JVM one. In bytecode these definitions are
+public, so a client can end up depending on one even though it cannot name it.
+
+MiMa ignores a qualified-private **member**, such as `private[foo] def`: nothing
+outside `foo` can call it.
+
+A qualified-private **class** is checked only when it escapes, e.g., a public method
+returns it, a public field holds it, or a public class extends it:
+
+```scala
+package foo
+private[foo] class C { def bar(x: Int) = x }
+object Lib { def go: C = new C }
+```
+
+`C` escapes through `Lib.go`, so a client can write `Lib.go.bar(1)`, and changing
+`bar` breaks it. MiMa reports changes to `C` and to its public members. A
+qualified-private class that never reaches a public signature is ignored.
+
+Escape detection reads bytecode, so it misses a class that leaks only through a
+type alias or an abstract type member, which leave no trace there:
+
+```scala
+object t {
+  private[t] class C
+  type K = C // no mention of K in the classfile
+}
+```
+
+To make MiMa treat qualified private declarations as private, including the
+public members of a qualified private class, filter on
+`Problem.isExternallyAccessible`:
+
+```scala
+import com.typesafe.tools.mima.core._
+
+mimaBinaryIssueFilters += { (p: Problem) => p.isExternallyAccessible }
+```
+
+This drops the escaping classes too, so it can hide a real break: in the example
+above it would silence the report about `C.bar`.
+
 ### Annotation-based exclusions
 
 The `mimaExcludeAnnotations` setting can be used to tell MiMa to

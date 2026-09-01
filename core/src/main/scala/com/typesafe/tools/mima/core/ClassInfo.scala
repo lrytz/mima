@@ -59,6 +59,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final var _fields: Members[FieldInfo]   = NoMembers
   final var _methods: Members[MethodInfo] = NoMembers
   final var _flags: Int                   = 0
+  final var _signature: Signature         = Signature.none
   final var _scopedPrivate: Boolean       = false
   final var _sealed: Boolean              = false
   final var _annotations: List[AnnotInfo] = Nil
@@ -77,7 +78,9 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def fields: Members[FieldInfo]   = afterLoading(_fields)
   final def methods: Members[MethodInfo] = afterLoading(_methods)
   final def flags: Int                   = afterLoading(_flags)
-  final def isScopedPrivate: Boolean     = afterLoading(_scopedPrivate)
+  final def signature: Signature         = afterLoading(_signature)
+  // the private[foo] mark is only in the pickle, in one of the two classfiles of this class or of an enclosing object
+  final def isScopedPrivate: Boolean     = { outerChain.foreach(c => { c.module.forceLoad; c.moduleClass.forceLoad }); afterLoading(_scopedPrivate) }
   final def isSealed: Boolean            = afterLoading(_sealed)
   final def annotations: List[AnnotInfo] = afterLoading(_annotations)
   final def implClass: ClassInfo         = { owner.setImplClasses; _implClass } // returns NoClass if this is not a trait
@@ -109,6 +112,15 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
    *  PackageInfo.subtypes for a library that seals nothing. */
   private[mima] def isClosedHierarchy: Boolean = isSealed &&
     owner.root.subtypes.getOrElse(this, Set.empty).forall(_.isClosed)
+
+  private[mima] def isDirectlyAccessible: Boolean = isPublic && !isScopedPrivate
+
+  private[mima] def isExternallyAccessible: Boolean = outerChain.forall(_.isDirectlyAccessible)
+
+  /** Whether mima checks this class: a client outside the scope can name it, or holds
+   *  one all the same because a public method returns it. */
+  private[mima] def isChecked: Boolean =
+    isExternallyAccessible || outerChain.exists(owner.root.escapedClasses)
 
   lazy val outer: ClassInfo = {
     val idx = bytecodeName.stripSuffix("$").lastIndexOf('$')
