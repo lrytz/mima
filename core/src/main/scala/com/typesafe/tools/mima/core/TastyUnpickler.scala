@@ -20,8 +20,7 @@ object TastyUnpickler {
     val names = readNames(in)
     val tree  = unpickleTree(getTreeReader(in, names), names)
 
-    copyPrivateFlags(tree, clazz.owner)
-    copyAnnotations(tree, clazz.owner)
+    copyToClasses(tree, clazz.owner)
   }
 
   private abstract class ClassTraverser(pkgInfo: PackageInfo) extends Traverser {
@@ -63,21 +62,7 @@ object TastyUnpickler {
     def forEachClass(clsDef: ClsDef, cls: ClassInfo): Unit
   }
 
-  def copyAnnotations(tree: Tree, pkgInfo: PackageInfo): Unit = new ClassTraverser(pkgInfo) {
-    def forEachClass(clsDef: ClsDef, cls: ClassInfo): Unit = {
-      cls._annotations ++= clsDef.annots.map(annot => AnnotInfo(annot.tycon.toString))
-
-      for (defDef <- clsDef.template.meths) {
-        val annots = defDef.annots.map(annot => AnnotInfo(annot.tycon.toString))
-        // cls.methods.get() instead of cls.lookupClassMethods() to avoid evaluating `superClasses` during Tasty
-        // unpickling, which can cause a circular lazy val initialization deadlock on Scala 3
-        for (meth <- cls.methods.get(defDef.name.source))
-          meth._annotations ++= annots
-      }
-    }
-  }.traverse(tree)
-
-  def copyPrivateFlags(tree: Tree, pkgInfo: PackageInfo): Unit = new ClassTraverser(pkgInfo) {
+  def copyToClasses(tree: Tree, pkgInfo: PackageInfo): Unit = new ClassTraverser(pkgInfo) {
     // an object without a companion class also gets a class of static forwarders, and the object's
     // own visibility is all that class carries
     private val pickledClasses = {
@@ -94,6 +79,16 @@ object TastyUnpickler {
       if (clsDef.privateWithin.isDefined) {
         cls._scopedPrivate = true
         if (cls.isModuleClass && !pickledClasses(cls.module)) cls.module._scopedPrivate = true
+      }
+
+      cls._annotations ++= clsDef.annots.map(annot => AnnotInfo(annot.tycon.toString))
+
+      for (defDef <- clsDef.template.meths) {
+        val annots = defDef.annots.map(annot => AnnotInfo(annot.tycon.toString))
+        // cls.methods.get() instead of cls.lookupClassMethods() to avoid evaluating `superClasses` during Tasty
+        // unpickling, which can cause a circular lazy val initialization deadlock on Scala 3
+        for (meth <- cls.methods.get(defDef.name.source))
+          meth._annotations ++= annots
       }
     }
 
