@@ -1,0 +1,2 @@
+method gone()Int in trait foo.T does not have a correspondent in new version
+method gone()Int in class foo.C does not have a correspondent in new version

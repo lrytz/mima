@@ -1,0 +1,1 @@
+method gone()Int in interface foo.T does not have a correspondent in new version
