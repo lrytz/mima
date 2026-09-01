@@ -79,8 +79,8 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def methods: Members[MethodInfo] = afterLoading(_methods)
   final def flags: Int                   = afterLoading(_flags)
   final def signature: Signature         = afterLoading(_signature)
-  // an object's private[foo] mark arrives with the pickle of one of its two classfiles, so load both
-  final def isScopedPrivate: Boolean     = { module.forceLoad; moduleClass.forceLoad; afterLoading(_scopedPrivate) }
+  // the private[foo] mark is only in the pickle, in one of the two classfiles of this class or of an enclosing object
+  final def isScopedPrivate: Boolean     = { outerChain.foreach(c => { c.module.forceLoad; c.moduleClass.forceLoad }); afterLoading(_scopedPrivate) }
   final def isSealed: Boolean            = afterLoading(_sealed)
   final def annotations: List[AnnotInfo] = afterLoading(_annotations)
   final def implClass: ClassInfo         = { owner.setImplClasses; _implClass } // returns NoClass if this is not a trait
@@ -115,8 +115,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
 
   private[mima] def isDirectlyAccessible: Boolean = isPublic && !isScopedPrivate
 
-  // the private[Outer] mark on a nested class arrives with the pickle of Outer, so ask the outermost first
-  private[mima] def isExternallyAccessible: Boolean = outerChain.toList.reverseIterator.forall(_.isDirectlyAccessible)
+  private[mima] def isExternallyAccessible: Boolean = outerChain.forall(_.isDirectlyAccessible)
 
   /** Whether mima checks this class: a client outside the scope can name it, or holds
    *  one all the same because a public method returns it. */
