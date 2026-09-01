@@ -107,6 +107,9 @@ object TastyUnpickler {
       (tmpl.fields ::: tmpl.meths).iterator
         .toSeq.groupBy(_.name).foreach { case (name, pickleMethods) =>
           doMethodOverloads(clazz, name, pickleMethods)
+          // the class of static forwarders carries no pickle, so mark it from the object's
+          if (clazz.isModuleClass && !pickledClasses(clazz.module))
+            doMethodOverloads(clazz.module, name, pickleMethods)
         }
     }
 
