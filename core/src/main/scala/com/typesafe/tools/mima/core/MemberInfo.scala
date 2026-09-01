@@ -31,7 +31,11 @@ sealed abstract class MemberInfo(val owner: ClassInfo, val bytecodeName: String,
 
 private[mima] final class FieldInfo(owner: ClassInfo, bytecodeName: String, flags: Int, descriptor: String)
     extends MemberInfo(owner, bytecodeName, flags, descriptor) {
-  def nonAccessible: Boolean = !isPublic || isSynthetic || hasSyntheticName
+  /** The static field dotty emits per nested object, dropped in 3.10 by scala/scala3#26937.
+   *  Nothing reads it: a nested object is reached as `Foo$Bar$.MODULE$`. */
+  private[mima] def isNestedObjectField: Boolean = // descriptors are dotted, not slashed
+    isStatic && owner.isModuleClass && descriptor == s"L${owner.fullName}$bytecodeName$$;"
+  def nonAccessible: Boolean = !isPublic || isSynthetic || hasSyntheticName || isNestedObjectField
   def fieldString: String    = s"${staticPrefix}field $decodedName in ${owner.classString}"
   override def toString      = s"field $bytecodeName: $descriptor"
 }
