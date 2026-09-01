@@ -51,6 +51,7 @@ class Signature(private val signature: String) {
 }
 
 object Signature {
+  // javac's Louter<T>.Inner; form yields only the outer; a nested class is reached through innerClasses
   private val classNameRe = "L([^<>;]+)[<;]".r
 
   def apply(signature: String): Signature = new Signature(signature)
