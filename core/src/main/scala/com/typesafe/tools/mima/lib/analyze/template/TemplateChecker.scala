@@ -22,8 +22,15 @@ private[analyze] object TemplateChecker {
         Some(MissingTypesProblem(newclazz, missingSuperClasses))
       else if (missingInterfaces.nonEmpty)
         Some(MissingTypesProblem(newclazz, missingInterfaces))
+      else if (hasIncompatibleParentTypeArgs(oldclazz, newclazz))
+        Some(IncompatibleClassSignatureProblem(oldclazz, newclazz))
       else
         None
     }
+  }
+
+  private def hasIncompatibleParentTypeArgs(oldclazz: ClassInfo, newclazz: ClassInfo): Boolean = {
+    val newArgs = newclazz.signature.parentTypeArgs
+    oldclazz.signature.parentTypeArgs.exists { case (parent, args) => newArgs.get(parent).exists(_ != args) }
   }
 }

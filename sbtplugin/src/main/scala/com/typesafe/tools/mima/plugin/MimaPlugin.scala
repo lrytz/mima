@@ -120,8 +120,11 @@ object MimaPlugin extends AutoPlugin {
   }
 
   private val binaryIssueFilters = Def.task {
-    val noSigs = ProblemFilters.exclude[IncompatibleSignatureProblem]("*")
-    mimaBinaryIssueFilters.value ++ (if (mimaReportSignatureProblems.value) Nil else Seq(noSigs))
+    val noSigs = Seq(
+      ProblemFilters.exclude[IncompatibleSignatureProblem]("*"),
+      ProblemFilters.exclude[IncompatibleClassSignatureProblem]("*"),
+    )
+    mimaBinaryIssueFilters.value ++ (if (mimaReportSignatureProblems.value) Nil else noSigs)
   }
 
   // Allows reuse between mimaFindBinaryIssues and mimaReportBinaryIssues

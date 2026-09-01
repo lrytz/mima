@@ -5,6 +5,7 @@ import com.typesafe.tools.mima.core.DirectMissingMethodProblem
 import com.typesafe.tools.mima.core.FinalMethodProblem
 import com.typesafe.tools.mima.core.InaccessibleFieldProblem
 import com.typesafe.tools.mima.core.InaccessibleMethodProblem
+import com.typesafe.tools.mima.core.IncompatibleClassSignatureProblem
 import com.typesafe.tools.mima.core.IncompatibleFieldTypeProblem
 import com.typesafe.tools.mima.core.IncompatibleMethTypeProblem
 import com.typesafe.tools.mima.core.IncompatibleResultTypeProblem
@@ -58,6 +59,8 @@ case class ProblemFormatter(
 
   // format: off
   def formatProblem(problem: Problem): Option[String] = problem match {
+    case prob: IncompatibleClassSignatureProblem =>
+      if (showBackward && showIncompatibleSignature) Some(str(prob)) else None
     case prob: TemplateProblem if showBackward  => Some(str(prob))
     case _:    TemplateProblem                  => None
 
