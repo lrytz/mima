@@ -1,5 +1,5 @@
 object App {
   def main(args: Array[String]): Unit = {
-    println(foo.Lib.use)
+    println(foo.Lib.go)
   }
 }

@@ -1,2 +1,4 @@
-mima reports what leaks out of the package-private class, and the app
-never touches it, so it runs.
+mima reports the new abstract method on foo.T, because Open is neither final
+nor sealed, so the hierarchy is not closed. Nothing outside foo can extend
+Open, so the app runs. filterInaccessible cannot drop the report: it asks
+about foo.T, which is public, not about Open.

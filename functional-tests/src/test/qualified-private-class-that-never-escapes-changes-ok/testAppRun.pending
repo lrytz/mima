@@ -1,2 +1,0 @@
-foo.C never appears in a public signature, so nothing outside foo can hold
-one, and the app runs; the work list names the change anyway.
