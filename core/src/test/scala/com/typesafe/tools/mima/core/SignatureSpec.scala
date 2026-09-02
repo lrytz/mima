@@ -56,6 +56,34 @@ final class SignatureSpec extends munit.FunSuite {
     assertEquals(Signature.none.parentTypeArgs, Map.empty[String, String])
   }
 
+  // a type parameter bounded by another one, e.g. `class A[T, U <: T]`
+  test("The class signature parser should keep the ';' that terminates a type variable reference") {
+    assertEquals(
+      Signature("<T:Ljava/lang/Object;U:TT;>Ljava/lang/Object;").canonicalized,
+      "<__0__:Ljava/lang/Object;__1__:__0__;>Ljava/lang/Object;",
+    )
+  }
+
+  test("The class signature parser should handle a type parameter bounded by another type parameter") {
+    assertEquals(
+      Signature("<T:Ljava/lang/Object;U:TT;>Ljava/lang/Object;").parentTypeArgs,
+      Map("java/lang/Object" -> ""),
+    )
+    assertEquals(
+      Signature("<Sub:Ljava/lang/Object;Semi:TSub;>Ljava/lang/Object;Lscala/collection/Stepper$EfficientSplit;")
+        .parentTypeArgs,
+      Map("java/lang/Object" -> "", "scala/collection/Stepper$EfficientSplit" -> ""),
+    )
+  }
+
+  test("The signature parser should stop at the end of the input rather than throw") {
+    import Signature.FormalTypeParameter
+    assertEquals(
+      FormalTypeParameter.parseList("T:Ljava/lang/Object;"),
+      (List(FormalTypeParameter("T", "Ljava/lang/Object")), ""))
+    assertEquals(FormalTypeParameter.parseList(""), (List.empty[FormalTypeParameter], ""))
+  }
+
   test("The signature parser should parse a signature with generic bounds that themselves have generics") {
     import Signature.FormalTypeParameter
     val rest = "(TT;Lscala/collection/immutable/List<TU;>;)Lscala/Option<TT;>;>"
