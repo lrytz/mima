@@ -80,7 +80,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def flags: Int                   = afterLoading(_flags)
   final def signature: Signature         = afterLoading(_signature)
   // the private[foo] mark is only in the pickle, in one of the two classfiles of this class or of an enclosing object
-  final def isScopedPrivate: Boolean     = { outerChain.foreach(c => { c.module.forceLoad; c.moduleClass.forceLoad }); afterLoading(_scopedPrivate) }
+  final def isScopedPrivate: Boolean     = { loadOuterChainModules(); afterLoading(_scopedPrivate) }
   final def isSealed: Boolean            = afterLoading(_sealed)
   final def annotations: List[AnnotInfo] = afterLoading(_annotations)
   final def implClass: ClassInfo         = { owner.setImplClasses; _implClass } // returns NoClass if this is not a trait
@@ -100,6 +100,11 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def description: String       = s"$declarationPrefix $formattedFullName"
   final def classString: String       = s"$accessModifier $description".trim
 
+  private var _outerChainModulesLoaded: Boolean = this == NoClass
+  @scala.annotation.tailrec
+  private def loadOuterChainModules(): Unit =
+    if (!_outerChainModulesLoaded) { _outerChainModulesLoaded = true; module.forceLoad; moduleClass.forceLoad; outer.loadOuterChainModules() }
+
   def outerChain: Iterator[ClassInfo] = Iterator.iterate(this)(_.outer).takeWhile(_ != NoClass)
 
   /** Nothing outside this library can extend it. */
@@ -115,7 +120,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
 
   private[mima] def isDirectlyAccessible: Boolean = isPublic && !isScopedPrivate
 
-  private[mima] def isExternallyAccessible: Boolean = outerChain.forall(_.isDirectlyAccessible)
+  private[mima] lazy val isExternallyAccessible: Boolean = isDirectlyAccessible && (outer == NoClass || outer.isExternallyAccessible)
 
   /** Whether mima checks this class: a client outside the scope can name it, or holds
    *  one all the same because a public method returns it. */
