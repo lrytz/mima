@@ -1,0 +1,1 @@
+Scala 3 syntax: union, intersection and a type lambda.

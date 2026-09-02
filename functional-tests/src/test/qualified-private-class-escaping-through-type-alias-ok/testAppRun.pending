@@ -1,0 +1,2 @@
+foo.C escapes only through the public alias Lib.K, which leaves no trace in
+the bytecode, so mima names nothing and the app dies on C.bar(Int).

@@ -1,0 +1,4 @@
+A client outside foo writes new foo.Lib.K() and calls bar on it, with no
+cast anywhere: the alias makes foo.C nameable, and nothing else in the
+library mentions C. mima reads no alias, so it names nothing and the app
+dies on C.bar(Int).

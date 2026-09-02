@@ -1,0 +1,3 @@
+Lib.K[T] aliases foo.C whatever T is, so a client writes new
+foo.Lib.K[Int]() and calls bar on it. mima reads no alias, so it names
+nothing and the app dies on C.bar(Int).
