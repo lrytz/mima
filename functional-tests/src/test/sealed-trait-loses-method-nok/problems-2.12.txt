@@ -1,0 +1,3 @@
+method gone()Int in interface foo.T does not have a correspondent in new version
+method gone()Int in class foo.C does not have a correspondent in new version
+synthetic static method $init$(foo.T)Unit in interface foo.T does not have a correspondent in new version
