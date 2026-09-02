@@ -1,2 +1,0 @@
-Lib.K aliases the nested foo.C#D through the pickle alone, so nothing in
-the bytecode names it and the app dies on D.bar(Int).

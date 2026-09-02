@@ -1,3 +1,0 @@
-mima names nothing here, and the app holds an empty list, so it runs. This
-case exists for the reader: TASTy writes a shared type once and writes an
-address for the second alias, so the reader meets an address, not a type.

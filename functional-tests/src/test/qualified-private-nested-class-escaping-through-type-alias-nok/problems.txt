@@ -1,0 +1,1 @@
+method bar(Int)Int in class foo.C#D does not have a correspondent in new version

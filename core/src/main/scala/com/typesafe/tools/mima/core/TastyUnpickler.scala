@@ -90,6 +90,30 @@ object TastyUnpickler {
         for (meth <- cls.methods.get(defDef.name.source))
           meth._annotations ++= annots
       }
+
+      for {
+        tpeDef <- clsDef.template.types if tpeDef.privateWithin.isEmpty
+        name   <- aliasedNames(tpeDef.tpe)
+      } cls._aliases ::= name
+    }
+
+    /** The bytecode names of the classes an alias names, empty for any other alias.
+     *
+     *  A package owns its members under a dot. A class owns its own under a dollar.
+     *  A client names C through `type L = List[C]`, so the arguments count too.
+     */
+    def aliasedNames(tpe: Type): Iterator[String] = {
+      @tailrec
+      def loop(tpe: Type)(res: List[String]): Iterator[String] = tpe match {
+        case t: TypeRefPkg => Iterator.single((t.fullyQual.source :: "." :: res).mkString)
+        case t: TypeRef    => loop(t.qual)(t.name.source :: "$" :: res)
+        case _             => Iterator.empty
+      }
+      tpe match {
+        case t: TypeRef     => loop(t.qual)(t.name.source :: Nil)
+        case t: AppliedType => aliasedNames(t.tycon) ++ t.args.iterator.flatMap(aliasedNames)
+        case _              => Iterator.empty
+      }
     }
 
     override def traverseTemplate(tmpl: Template): Unit = {
@@ -132,8 +156,9 @@ object TastyUnpickler {
     def readTypeRef()      = TypeRef(name = readName(), qual = readType())          // NameRef qual_Type               -- A reference `qual.name` to a non-local member
     def readAnnot()        = { readEnd(); Annot(readType(), skipTree(readByte())) } // tycon_Type fullAnnotation_Tree  -- An annotation, given (class) type of constructor, and full application tree
     def readSharedType()   = unpickleTree(forkAt(readAddr()), names) match {
-      case t @ UnknownTree(tag) => throw new Exception(s"Expected Type, but was UnknownTree(${astTagToString(tag)}); init:${t.stack.map("\n\tat " + _).mkString}\n")
-      case tree                 => tree.asInstanceOf[Type]
+      case tpe: Type => tpe
+      // this reader skips some trees, and an alias can share one of those
+      case _ => UnknownType(SHAREDtype)
     }
 
     def readPath() = readByte() match {
@@ -143,12 +168,55 @@ object TastyUnpickler {
     }
 
     def readType(): Type = readByte() match {
+      case TYPEBOUNDStpt => readTypeBoundsTpt()
+      case APPLIEDtype   => readAppliedType()
+      case APPLIEDtpt    => readAppliedType()
+      case IDENTtpt      => readIdentTpt()
+      case SELECTtpt     => readSelectTpt()
+      case LAMBDAtpt     => readLambdaTpt()
+      case REFINEDtpt    => readRefinedTpt()
+
       case TERMREFpkg => readTypeRefPkg()
       case TYPEREFpkg => readTypeRefPkg()
       case TYPEREF    => readTypeRef()
       case SHAREDtype => readSharedType()
       case tag        => skipTree(tag); UnknownType(tag)
     }
+
+    // APPLIEDtype/APPLIEDtpt Length tycon arg* -- tycon[args]
+    def readAppliedType(): Type = { val end = readEnd(); AppliedType(readType(), until(end)(readType())) }
+
+    // LAMBDAtpt Length TypeParam* body_Term -- [TypeParams] => body
+    def readLambdaTpt(): Type = {
+      val end = readEnd()
+      while (nextByte == TYPEPARAM) skipTree(readByte())
+      val tpe = readType()
+      goto(end)
+      tpe
+    }
+
+    // TYPEBOUNDStpt Length low_Term high_Term? -- {{{ >: low <: high }}}
+    def readTypeBoundsTpt(): Type = {
+      val end = readEnd()
+      val lo  = readType()
+      val tpe = if (currentAddr == end) lo else readType()
+      goto(end)
+      tpe
+    }
+
+    // REFINEDtpt Length underlying_Term refinement_Stat* -- underlying {refinements}
+    def readRefinedTpt(): Type = {
+      val end = readEnd()
+      val tpe = readType()
+      goto(end)
+      tpe
+    }
+
+    // IDENTtpt NameRef Type -- used for all type idents
+    def readIdentTpt(): Type = { readName(); readType() }
+
+    // SELECTtpt NameRef qual_Term -- qual.name
+    def readSelectTpt(): Type = { val name = readName(); TypeRef(readType(), name) }
 
     def readTree(): Tree = {
       val start = currentAddr
@@ -198,18 +266,20 @@ object TastyUnpickler {
           while (nextByte != SELFDEF && nextByte != DEFDEF) skipTree(readByte())                               // parents
           if (nextByte == SELFDEF) skipTree(readByte())                                                        // self
           val classes = new ListBuffer[ClsDef]
+          val types   = new ListBuffer[TypeDef]
           val fields  = new ListBuffer[ValDef]
           val meths   = new ListBuffer[DefDef]
           doUntil(end)(readByte() match {
             case TYPEDEF => readTypeDef() match {
                 case clsDef: ClsDef => classes += clsDef
+                case tree: TypeDef  => types += tree
                 case _              =>
               }
             case VALDEF => fields += readValDef()
             case DEFDEF => meths += readDefDef()
             case tag    => skipTree(tag)
           })
-          Template(classes.toList, fields.toList, meths.toList)
+          Template(classes.toList, types.toList, fields.toList, meths.toList)
         }
 
         def readClassDef(name: Name, end: Addr) = {
@@ -220,7 +290,12 @@ object TastyUnpickler {
           ClsDef(name.toTypeName, template, privateWithin, annots, flags)
         }
 
-        def readTypeMemberDef(end: Addr) = { goto(end); UnknownTree(TYPEDEF) } // NameRef type_Term Modifier* -- modifiers type name (= type | bounds)
+        // NameRef type_Term Modifier* -- modifiers type name (= type | bounds)
+        def readTypeMemberDef(name: Name, end: Addr) = {
+          val tpe                        = readType()
+          val (privateWithin, _, annots) = readMods(end)
+          TypeDef(name, tpe, privateWithin, annots)
+        }
 
         def readMods(end: Addr): (Option[Type], Flags, List[Annot]) = {
           //   PRIVATEqualified qualifier_Type --   private[qualifier]
@@ -243,7 +318,7 @@ object TastyUnpickler {
         def readTypeDef() = {
           val end  = readEnd()
           val name = readName()
-          if (nextByte == TEMPLATE) readClassDef(name, end) else readTypeMemberDef(end)
+          if (nextByte == TEMPLATE) readClassDef(name, end) else readTypeMemberDef(name, end)
         }
 
         val end  = fork.readEnd()
@@ -301,7 +376,12 @@ object TastyUnpickler {
   final case class ClsDef(name: TypeName, template: Template, privateWithin: Option[Type], annots: List[Annot], flags: Flags) extends MemberStat {
     override protected def showContents = s"class $name$template"
   }
-  final case class Template(classes: List[ClsDef], fields: List[ValDef], meths: List[DefDef])               extends Tree { def show = s"${(classes ::: meths).map("\n  " + _).mkString}" }
+  final case class Template(classes: List[ClsDef], types: List[TypeDef], fields: List[ValDef], meths: List[DefDef]) extends Tree {
+    def show = s"${(classes ::: meths).map("\n  " + _).mkString}"
+  }
+  final case class TypeDef(name: Name, tpe: Type, privateWithin: Option[Type], annots: List[Annot]) extends Tree {
+    def show = s"${showXs(annots, end = " ")}${showPrivateWithin(privateWithin)}type $name = ${tpe.show}"
+  }
   final case class ValDef(name: Name, privateWithin: Option[Type], flags: Flags, annots: List[Annot] = Nil) extends TermMemberDef
   final case class DefDef(name: Name, privateWithin: Option[Type], flags: Flags, annots: List[Annot] = Nil) extends TermMemberDef
 
@@ -319,6 +399,10 @@ object TastyUnpickler {
 
   final case class UnknownType(tag: Int)           extends Type { def show = s"UnknownType(${astTagToString(tag)})" }
   final case class TypeRef(qual: Type, name: Name) extends Type { def show = s"$qual.$name"                         }
+
+  final case class AppliedType(tycon: Type, args: List[Type]) extends Type {
+    def show = s"${tycon.show}[${args.map(_.show).mkString(", ")}]"
+  }
 
   sealed trait Path extends Type
 
@@ -339,6 +423,7 @@ object TastyUnpickler {
       case tmpl: Template => traverseTemplate(tmpl)
       case valDef: ValDef => traverseValDef(valDef)
       case defDef: DefDef => traverseDefDef(defDef)
+      case tree: TypeDef  => traverseTypeDef(tree)
       case tp: Type       => traverseType(tp)
       case annot: Annot   => traverseAnnot(annot)
       case UnknownTree(_) =>
@@ -348,9 +433,10 @@ object TastyUnpickler {
 
     def traversePkg(pkg: Pkg)                              = { val Pkg(path, trees) = pkg; traverse(path); trees.foreach(traverse) }
     def traverseClsDef(t: ClsDef)                          = { traverseName(t.name); traverseTemplate(t.template); traversePrivateWithin(t.privateWithin); t.annots.foreach(traverse) }
-    def traverseTemplate(tmpl: Template)                   = { val Template(classes, fields, meths) = tmpl; classes.foreach(traverse); fields.foreach(traverse); meths.foreach(traverse) }
+    def traverseTemplate(t: Template)                      = { t.classes.foreach(traverse); t.types.foreach(traverse); t.fields.foreach(traverse); t.meths.foreach(traverse) }
     def traverseValDef(valDef: ValDef)                     = { val ValDef(name, privateWithin, _, annots) = valDef; traverseName(name); traversePrivateWithin(privateWithin); annots.foreach(traverse) }
     def traverseDefDef(defDef: DefDef)                     = { val DefDef(name, privateWithin, _, annots) = defDef; traverseName(name); traversePrivateWithin(privateWithin); annots.foreach(traverse) }
+    def traverseTypeDef(t: TypeDef)                        = { traverseName(t.name); traverseType(t.tpe); traversePrivateWithin(t.privateWithin); t.annots.foreach(traverse) }
     def traversePrivateWithin(privateWithin: Option[Type]) = { privateWithin.foreach(traverseType) }
 
     // def traverseClassPrivate(classPrivate: Boolean)        =     { privateWithin.foreach(traverseType) }
@@ -364,6 +450,7 @@ object TastyUnpickler {
     def traverseType(tp: Type): Unit = tp match {
       case path: Path          => traversePath(path)
       case TypeRef(qual, name) => traverse(qual); traverseName(name)
+      case tp: AppliedType     => traverse(tp.tycon); tp.args.foreach(traverse)
       case UnknownType(_)      =>
     }
   }

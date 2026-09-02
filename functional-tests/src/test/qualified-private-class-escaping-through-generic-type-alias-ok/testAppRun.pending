@@ -1,3 +1,0 @@
-Lib.make hands the list out as Any, whose descriptor names nothing, so
-Lib.K is the only trace of foo.C. The client casts to it and calls bar.
-mima reads no alias, so it names nothing and the app dies on C.bar(Int).

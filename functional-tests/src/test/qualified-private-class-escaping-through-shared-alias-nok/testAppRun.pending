@@ -1,0 +1,4 @@
+mima names both classes. The app holds an empty list and runs, because
+nothing here hands a value to a client. This case exists for the reader:
+TASTy writes a shared type once and writes an address for the second
+alias, so the reader meets an address, not a type.

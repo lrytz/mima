@@ -110,6 +110,7 @@ sealed abstract class PackageInfo {
         }
       }
       enqueueAll(clazz.signature.classNames.map(clazz.owner.definitions.fromName))
+      enqueueAll(clazz.aliases.iterator.map(clazz.owner.definitions.fromName))
       enqueue(clazz.superClass)
       enqueueAll(clazz.interfaces.iterator)
       clazz.innerClasses.foreach(clazz.owner.classes.get(_).foreach(enqueue))

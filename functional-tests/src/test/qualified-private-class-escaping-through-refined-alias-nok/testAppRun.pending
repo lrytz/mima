@@ -1,0 +1,3 @@
+mima names foo.C. No client reaches that break: Scala takes no subclass and
+no instance of a refinement, and any value of one needs a subclass of C,
+which exposes C already. The report is precautionary.

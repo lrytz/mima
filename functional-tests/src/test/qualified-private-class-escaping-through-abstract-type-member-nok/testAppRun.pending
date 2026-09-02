@@ -1,0 +1,3 @@
+mima names foo.C. Nothing here hands a value to a client, so the app runs:
+the bound gives a client the name, and a value of that type would have to
+come from the library.

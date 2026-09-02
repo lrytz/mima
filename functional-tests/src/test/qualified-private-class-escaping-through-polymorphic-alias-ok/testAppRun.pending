@@ -1,3 +1,0 @@
-As the generic case, with the class inside the type arguments of a
-parameterised alias. mima reads no alias, so it names nothing and the app
-dies on C.bar(Int).
