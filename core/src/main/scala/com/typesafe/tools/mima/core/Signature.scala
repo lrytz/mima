@@ -11,9 +11,9 @@ class Signature(private val signature: String) {
 
   lazy val canonicalized = {
     signature.headOption match {
-      case None | Some('(') => signature
-
-      case _ =>
+      // only a signature that opens with formal type parameters has any to rename;
+      // a class signature such as `LBase<Ljava/lang/String;>;` has none
+      case Some('<') =>
         val (formalTypeParameters, _) = FormalTypeParameter.parseList(signature.drop(1))
 
         val replacements = formalTypeParameters.map(_.identifier).zipWithIndex
@@ -23,7 +23,33 @@ class Signature(private val signature: String) {
             .replace(s";${from}:", s";__${to}__:")
             .replace(s"T${from};", s"__${to}__")
         }
+
+      case _ => signature
     }
+  }
+
+  /** For a class signature, the type arguments it passes to each parent it names.
+   *
+   *  A client's casts come from the arguments a class passes to a parent it already had,
+   *  so a parent only one version names is absent here rather than counted as a change.
+   */
+  private[mima] def parentTypeArgs: Map[String, String] = {
+    val sig  = canonicalized
+    val rest = if (sig.startsWith("<")) FormalTypeParameter.parseList(sig.drop(1))._2 else sig
+
+    @tailrec def loop(in: String, acc: Map[String, String]): Map[String, String] = {
+      if (in.isEmpty || in.charAt(0) != 'L') acc
+      else {
+        val one          = in.substring(0, endOfClassTypeSig(in))
+        val cut          = one.indexOf('<')
+        val (name, args) =
+          if (cut == -1) (one.substring(1, one.length - 1), "")
+          else (one.substring(1, cut), one.substring(cut, one.length - 1))
+        loop(in.substring(one.length), acc + (name -> args))
+      }
+    }
+
+    loop(rest, Map.empty)
   }
 
   def matches(newer: Signature, isConstructor: Boolean): Boolean = {
@@ -53,6 +79,23 @@ class Signature(private val signature: String) {
 object Signature {
   // javac's Louter<T>.Inner; form yields only the outer; a nested class is reached through innerClasses
   private val classNameRe = "L([^<>;]+)[<;]".r
+
+  /** Where the class type signature starting at `in` ends, past its terminating ';'. */
+  private def endOfClassTypeSig(in: String): Int = {
+    var i     = 0
+    var depth = 0
+    var end   = -1
+    while (end < 0 && i < in.length) {
+      in.charAt(i) match {
+        case '<'               => depth += 1
+        case '>'               => depth -= 1
+        case ';' if depth == 0 => end = i + 1
+        case _                 =>
+      }
+      i += 1
+    }
+    if (end < 0) in.length else end
+  }
 
   def apply(signature: String): Signature = new Signature(signature)
 

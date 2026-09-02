@@ -173,7 +173,23 @@ would not in fact cause problems at run time. Notably, it will warn when
 updating your project to scala 2.12.9+ or 2.13.1+,
 see [this issue](https://github.com/scala-garden/mima/issues/423) for details.
 
-You can opt-in to this check by setting:
+The same setting also enables `IncompatibleClassSignature`, which compares the
+`Signature` of a class rather than of a method. A client compiled against
+
+```scala
+class Base[T](val value: T)
+class Public extends Base[String]("hi")
+```
+
+reads `value` as `Object` and casts it to `String`. Changing the parent to
+`Base[Integer]` leaves every descriptor untouched, so nothing else in MiMa
+notices, and the client gets a `ClassCastException`.
+
+Only the type arguments a class passes to a parent it still has are compared.
+Gaining a parent changes the class signature too, but no client can have been
+compiled against it, so that alone is not reported.
+
+You can opt-in to these checks by setting:
 
 ```scala
 import com.typesafe.tools.mima.plugin.MimaKeys._

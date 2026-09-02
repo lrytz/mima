@@ -34,13 +34,14 @@ sealed abstract class Problem extends ProblemRef {
   final def description: String => String = getDescription(_)
 
   private def getDescription(affectedVersion: String): String = this match {
-    case MissingClassProblem(oldclazz)                 => s"${oldclazz.classString} does not have a correspondent in $affectedVersion version"
-    case IncompatibleTemplateDefProblem(ref, newclazz) => s"declaration of ${ref.description} is ${newclazz.description} in $affectedVersion version; changing ${ref.declarationPrefix} to ${newclazz.declarationPrefix} breaks client code"
-    case InaccessibleClassProblem(ref)                 => s"${ref.classString} is inaccessible in $affectedVersion version, it must be public."
-    case AbstractClassProblem(ref)                     => s"${ref.classString} was concrete; is declared abstract in $affectedVersion version"
-    case FinalClassProblem(ref)                        => s"${ref.classString} is declared final in $affectedVersion version"
-    case CyclicTypeReferenceProblem(ref)               => s"the type hierarchy of ${ref.description} is different in $affectedVersion version. Type ${ref.bytecodeName} appears to be a subtype of itself"
-    case MissingTypesProblem(ref, missing)             => s"the type hierarchy of ${ref.description} is different in $affectedVersion version. Missing types ${missing.map(_.fullName).mkString("{", ",", "}")}"
+    case MissingClassProblem(oldclazz)                    => s"${oldclazz.classString} does not have a correspondent in $affectedVersion version"
+    case IncompatibleTemplateDefProblem(ref, newclazz)    => s"declaration of ${ref.description} is ${newclazz.description} in $affectedVersion version; changing ${ref.declarationPrefix} to ${newclazz.declarationPrefix} breaks client code"
+    case InaccessibleClassProblem(ref)                    => s"${ref.classString} is inaccessible in $affectedVersion version, it must be public."
+    case AbstractClassProblem(ref)                        => s"${ref.classString} was concrete; is declared abstract in $affectedVersion version"
+    case FinalClassProblem(ref)                           => s"${ref.classString} is declared final in $affectedVersion version"
+    case CyclicTypeReferenceProblem(ref)                  => s"the type hierarchy of ${ref.description} is different in $affectedVersion version. Type ${ref.bytecodeName} appears to be a subtype of itself"
+    case MissingTypesProblem(ref, missing)                => s"the type hierarchy of ${ref.description} is different in $affectedVersion version. Missing types ${missing.map(_.fullName).mkString("{", ",", "}")}"
+    case IncompatibleClassSignatureProblem(ref, newclazz) => s"${ref.classString} has a different generic signature in $affectedVersion version, where it is ${newclazz.signature} rather than ${ref.signature}. See https://github.com/scala-garden/mima#incompatiblesignatureproblem"
 
     case MissingFieldProblem(ref)                         => s"${ref.memberString} does not have a correspondent in $affectedVersion version"
     case InaccessibleFieldProblem(ref)                    => s"${ref.memberString} is inaccessible in $affectedVersion version, it must be public."
@@ -64,14 +65,15 @@ sealed abstract class Problem extends ProblemRef {
 }
 
 // Template problems
-sealed abstract class TemplateProblem(val ref: ClassInfo)                                 extends Problem with TemplateRef
-final case class MissingClassProblem(oldclazz: ClassInfo)                                 extends TemplateProblem(oldclazz)
-final case class IncompatibleTemplateDefProblem(oldclazz: ClassInfo, newclazz: ClassInfo) extends TemplateProblem(oldclazz)
-final case class InaccessibleClassProblem(newclazz: ClassInfo)                            extends TemplateProblem(newclazz)
-final case class AbstractClassProblem(oldclazz: ClassInfo)                                extends TemplateProblem(oldclazz)
-final case class FinalClassProblem(oldclazz: ClassInfo)                                   extends TemplateProblem(oldclazz)
-final case class CyclicTypeReferenceProblem(clazz: ClassInfo)                             extends TemplateProblem(clazz)
-final case class MissingTypesProblem(newclazz: ClassInfo, missing: Iterable[ClassInfo])   extends TemplateProblem(newclazz)
+sealed abstract class TemplateProblem(val ref: ClassInfo)                                    extends Problem with TemplateRef
+final case class MissingClassProblem(oldclazz: ClassInfo)                                    extends TemplateProblem(oldclazz)
+final case class IncompatibleTemplateDefProblem(oldclazz: ClassInfo, newclazz: ClassInfo)    extends TemplateProblem(oldclazz)
+final case class InaccessibleClassProblem(newclazz: ClassInfo)                               extends TemplateProblem(newclazz)
+final case class AbstractClassProblem(oldclazz: ClassInfo)                                   extends TemplateProblem(oldclazz)
+final case class FinalClassProblem(oldclazz: ClassInfo)                                      extends TemplateProblem(oldclazz)
+final case class CyclicTypeReferenceProblem(clazz: ClassInfo)                                extends TemplateProblem(clazz)
+final case class MissingTypesProblem(newclazz: ClassInfo, missing: Iterable[ClassInfo])      extends TemplateProblem(newclazz)
+final case class IncompatibleClassSignatureProblem(oldclazz: ClassInfo, newclazz: ClassInfo) extends TemplateProblem(oldclazz)
 
 // Member problems
 sealed abstract class MemberProblem(val ref: MemberInfo) extends Problem with MemberRef

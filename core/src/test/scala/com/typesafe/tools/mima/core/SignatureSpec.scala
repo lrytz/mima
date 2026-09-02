@@ -31,6 +31,31 @@ final class SignatureSpec extends munit.FunSuite {
     assert(withU.matches(withT, false))
   }
 
+  // signatures as scalac emits them for the class, i.e. formal type parameters then parents
+  test("The class signature parser should split the parents and keep their type arguments") {
+    assertEquals(
+      Signature("Ljava/lang/Object;LDialogSource<Ljava/lang/String;>;").parentTypeArgs,
+      Map("java/lang/Object" -> "", "DialogSource" -> "<Ljava/lang/String;>"),
+    )
+  }
+
+  test("The class signature parser should not confuse a nested type argument for a parent") {
+    assertEquals(
+      Signature("LBase<Lscala/Tuple2<Ljava/lang/String;Ljava/lang/String;>;>;").parentTypeArgs,
+      Map("Base" -> "<Lscala/Tuple2<Ljava/lang/String;Ljava/lang/String;>;>"),
+    )
+  }
+
+  test("The class signature parser should rename formal type parameters, so only the arguments differ") {
+    val withT = Signature("<T:Ljava/lang/Object;>Ljava/lang/Object;LBase<TT;>;")
+    val withA = Signature("<A:Ljava/lang/Object;>Ljava/lang/Object;LBase<TA;>;")
+    assertEquals(withT.parentTypeArgs, withA.parentTypeArgs)
+  }
+
+  test("The class signature parser should yield nothing for a class with no signature") {
+    assertEquals(Signature.none.parentTypeArgs, Map.empty[String, String])
+  }
+
   test("The signature parser should parse a signature with generic bounds that themselves have generics") {
     import Signature.FormalTypeParameter
     val rest = "(TT;Lscala/collection/immutable/List<TU;>;)Lscala/Option<TT;>;>"

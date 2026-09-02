@@ -1,0 +1,1 @@
+class Public has a different generic signature in new version, where it is LBase<Ljava/lang/Integer;>; rather than LBase<Ljava/lang/String;>;. See https://github.com/scala-garden/mima#incompatiblesignatureproblem
