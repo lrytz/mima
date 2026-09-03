@@ -21,7 +21,7 @@ class Signature(private val signature: String) {
           sig
             .replace(s"<${from}:", s"<__${to}__:")
             .replace(s";${from}:", s";__${to}__:")
-            .replace(s"T${from};", s"__${to}__")
+            .replace(s"T${from};", s"__${to}__;")
         }
 
       case _ => signature
@@ -104,8 +104,11 @@ object Signature {
   case class FormalTypeParameter(identifier: String, bound: String)
 
   object FormalTypeParameter {
+    // running out of input ends the list, so a signature the grammar below does not
+    // cover yields a partial parse rather than an exception that fails the whole run
     @tailrec def parseList(in: String, acc: List[FormalTypeParameter] = Nil): (List[FormalTypeParameter], String) = {
-      in(0) match {
+      if (in.isEmpty) (acc, in)
+      else in(0) match {
         case '>' => (acc, in.drop(1))
         case _   => {
           val (next, rest) = parseOne(in)
@@ -122,7 +125,9 @@ object Signature {
     }
 
     @tailrec private def splitBoundAndRest(in: String, boundSoFar: String = "", depth: Int = 0): (String, String) = {
-      if (depth > 0) {
+      if (in.isEmpty) {
+        (boundSoFar, in)
+      } else if (depth > 0) {
         in(0) match {
           case '>' => splitBoundAndRest(in.drop(1), boundSoFar + '>', depth - 1)
           case '<' => splitBoundAndRest(in.drop(1), boundSoFar + '<', depth + 1)
