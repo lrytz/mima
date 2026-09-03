@@ -99,7 +99,8 @@ object TastyUnpickler {
 
     /** The bytecode names of the classes an alias names, empty for any other alias.
      *
-     *  A package owns its members under a dot. A class owns its own under a dollar.
+     *  A package owns its members under a dot. A class, and the object a class sits in,
+     *  own their own under a dollar.
      *  A client names C through `type L = List[C]`, so the arguments count too.
      */
     def aliasedNames(tpe: Type): Iterator[String] = {
@@ -107,6 +108,7 @@ object TastyUnpickler {
       def loop(tpe: Type)(res: List[String]): Iterator[String] = tpe match {
         case t: TypeRefPkg => Iterator.single((t.fullyQual.source :: "." :: res).mkString)
         case t: TypeRef    => loop(t.qual)(t.name.source :: "$" :: res)
+        case t: TermRef    => loop(t.qual)(t.name.source :: "$" :: res)
         case _             => Iterator.empty
       }
       tpe match {
@@ -154,6 +156,7 @@ object TastyUnpickler {
     def skipTree(tag: Int) = { skipTreeTagged(in, tag); UnknownTree(tag) }
     def readTypeRefPkg()   = TypeRefPkg(readName())                                 // fullyQualified_NameRef          -- A reference to a package member with given fully qualified name
     def readTypeRef()      = TypeRef(name = readName(), qual = readType())          // NameRef qual_Type               -- A reference `qual.name` to a non-local member
+    def readTermRef()      = TermRef(name = readName(), qual = readType())          // possiblySigned_NameRef qual_Type -- A reference `qual.name` to a non-local term, e.g. the object a class sits in
     def readAnnot()        = { readEnd(); Annot(readType(), skipTree(readByte())) } // tycon_Type fullAnnotation_Tree  -- An annotation, given (class) type of constructor, and full application tree
     def readSharedType()   = unpickleTree(forkAt(readAddr()), names) match {
       case tpe: Type => tpe
@@ -179,6 +182,7 @@ object TastyUnpickler {
       case TERMREFpkg => readTypeRefPkg()
       case TYPEREFpkg => readTypeRefPkg()
       case TYPEREF    => readTypeRef()
+      case TERMREF    => readTermRef()
       case SHAREDtype => readSharedType()
       case tag        => skipTree(tag); UnknownType(tag)
     }
@@ -399,6 +403,7 @@ object TastyUnpickler {
 
   final case class UnknownType(tag: Int)           extends Type { def show = s"UnknownType(${astTagToString(tag)})" }
   final case class TypeRef(qual: Type, name: Name) extends Type { def show = s"$qual.$name"                         }
+  final case class TermRef(qual: Type, name: Name) extends Type { def show = s"$qual.$name"                         }
 
   final case class AppliedType(tycon: Type, args: List[Type]) extends Type {
     def show = s"${tycon.show}[${args.map(_.show).mkString(", ")}]"
@@ -450,6 +455,7 @@ object TastyUnpickler {
     def traverseType(tp: Type): Unit = tp match {
       case path: Path          => traversePath(path)
       case TypeRef(qual, name) => traverse(qual); traverseName(name)
+      case TermRef(qual, name) => traverse(qual); traverseName(name)
       case tp: AppliedType     => traverse(tp.tycon); tp.args.foreach(traverse)
       case UnknownType(_)      =>
     }

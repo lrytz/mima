@@ -265,7 +265,10 @@ object MimaUnpickler {
 
   /** The bytecode name of the class this symbol denotes, empty for any other symbol.
    *
-   *  A package owns its members under a dot. A class owns its own under a dollar.
+   *  A class owns its own under a dollar. An owner the pickle writes as a module class
+   *  is either a package or the object a class sits in, and nothing here tells them
+   *  apart, so both get a dot; [[Definitions.fromAliasName]] settles it against the
+   *  package tree.
    */
   private def fullName(sym: SymInfo): Iterator[String] = {
     @tailrec
