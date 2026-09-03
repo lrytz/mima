@@ -183,6 +183,7 @@ object TastyUnpickler {
       case TYPEREFpkg => readTypeRefPkg()
       case TYPEREF    => readTypeRef()
       case TERMREF    => readTermRef()
+      case SELECT     => readTermRef() // SELECT carries the same name and qualifier
       case SHAREDtype => readSharedType()
       case tag        => skipTree(tag); UnknownType(tag)
     }
