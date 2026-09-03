@@ -1,3 +1,0 @@
-# missing:
-#     method bar(Int)Int in class foo.Outer#Inner#Deep does not have a correspondent in new version
-# the reader stops at the second object, so foo.Outer.Inner.Deep names nothing

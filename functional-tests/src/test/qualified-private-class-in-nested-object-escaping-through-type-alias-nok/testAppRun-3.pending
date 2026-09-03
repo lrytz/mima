@@ -1,1 +1,0 @@
-mima names nothing under Scala 3, so the app dies on Deep.bar(Int).
