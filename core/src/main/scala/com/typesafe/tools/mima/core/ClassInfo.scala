@@ -60,6 +60,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final var _methods: Members[MethodInfo] = NoMembers
   final var _flags: Int                   = 0
   final var _signature: Signature         = Signature.none
+  final var _aliases: List[String]        = Nil
   final var _scopedPrivate: Boolean       = false
   final var _sealed: Boolean              = false
   final var _annotations: List[AnnotInfo] = Nil
@@ -79,6 +80,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def methods: Members[MethodInfo] = afterLoading(_methods)
   final def flags: Int                   = afterLoading(_flags)
   final def signature: Signature         = afterLoading(_signature)
+  final def aliases: List[String]        = afterLoading(_aliases)
   // the private[foo] mark is only in the pickle, in one of the two classfiles of this class or of an enclosing object
   final def isScopedPrivate: Boolean     = { loadOuterChainModules(); afterLoading(_scopedPrivate) }
   final def isSealed: Boolean            = afterLoading(_sealed)

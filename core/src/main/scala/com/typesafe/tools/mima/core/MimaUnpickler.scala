@@ -3,6 +3,8 @@ package com.typesafe.tools.mima.core
 
 import com.typesafe.tools.mima.core.PickleFormat.*
 
+import scala.annotation.tailrec
+
 object MimaUnpickler {
   def unpickleClass(buf: PickleBuffer, clazz: ClassInfo, path: String): Unit = {
     if (buf.bytes.length == 0) return
@@ -89,7 +91,7 @@ object MimaUnpickler {
       if (tag == CLASSsym && buf.readIndex != end) buf.readNat() // thistype_Ref
       buf.assertEnd(end)
       val isScopedPrivate = privateWithin != -1
-      SymbolInfo(tag, name, owner, flags, isScopedPrivate)
+      SymbolInfo(tag, name, owner, flags, isScopedPrivate, info)
     }
 
     def readExt(tag: Int): ExtInfo = {
@@ -110,7 +112,16 @@ object MimaUnpickler {
       tag match {
         case THIStpe    => ThisTypeInfo(readSymRef())
         case TYPEREFtpe => TypeRefInfo(readTypeRef(), readSymRef(), until(end, () => readTypeRef()))
-        case _          => UnknownType(tag)
+
+        // a parameterised alias and a refinement wrap the type a client names
+        case POLYtpe    => readTypeRef()
+        case REFINEDtpe => readSymRef(); RefinedTypeInfo(until(end, () => readTypeRef()))
+
+        // a bound names the class as plainly as an alias does: `type K <: C`, `List[_ <: C]`
+        case TYPEBOUNDStpe  => readTypeRef(); readTypeRef()
+        case EXISTENTIALtpe => ExistentialTypeInfo(readTypeRef(), until(end, () => readSymRef()))
+
+        case _ => UnknownType(tag)
       }
     }
 
@@ -220,6 +231,25 @@ object MimaUnpickler {
       doMethods(cls, methSyms.filter(_.owner == clsSym).toList)
     }
 
+    def aliasedNames(tpe: Entry): Iterator[String] = tpe match {
+      case t: TypeRefInfo         => fullName(t.sym) ++ t.targs.iterator.flatMap(aliasedNames)
+      case t: RefinedTypeInfo     => t.parents.iterator.flatMap(aliasedNames)
+      case t: ExistentialTypeInfo => aliasedNames(t.tpe) ++ t.syms.iterator.flatMap(boundNames)
+      case _                      => Iterator.empty
+    }
+
+    def boundNames(sym: SymInfo): Iterator[String] = sym match {
+      case s: SymbolInfo if s.infoRef >= 0 =>
+        aliasedNames(at(s.infoRef, readType))
+      case _ => Iterator.empty
+    }
+
+    for {
+      sym <- syms if (sym.tag == ALIASsym || sym.tag == TYPEsym) && !sym.isScopedPrivate && !sym.isClassPrivate
+      cls = classes.getOrElse(sym.owner, NoClass) if cls != NoClass
+      name <- aliasedNames(at(sym.infoRef, readType))
+    } cls._aliases ::= name
+
     for (symAnnot <- entries.iterator.collect { case s: SymAnnotInfo => s }) {
       val cls = classes.getOrElse(symAnnot.sym, null) // add support for @experimental methods?
       if (cls != null && cls != NoClass) {
@@ -233,6 +263,25 @@ object MimaUnpickler {
     }
   }
 
+  /** The bytecode name of the class this symbol denotes, empty for any other symbol.
+   *
+   *  A class owns its own under a dollar. An owner the pickle writes as a module class
+   *  is either a package or the object a class sits in, and nothing here tells them
+   *  apart, so both get a dot; [[Definitions.fromAliasName]] settles it against the
+   *  package tree.
+   */
+  private def fullName(sym: SymInfo): Iterator[String] = {
+    @tailrec
+    def loop(sym: SymInfo)(res: List[String]): String =
+      if (sym == null || sym.isNoSymbol || sym.isEmpty) res.mkString
+      else loop(sym.owner) {
+        val name = sym.name
+        name.value :: { if (name.tag == TYPEname) "$" else "." } :: res
+      }
+    val name = sym.name
+    if (name.tag != TYPEname) Iterator.empty else Iterator.single(loop(sym.owner)(name.value :: Nil))
+  }
+
   sealed trait Entry {
     override def toString = this match {
       case TermName(value)              => s"$value."
@@ -240,6 +289,8 @@ object MimaUnpickler {
       case x: SymInfo                   => s"$x"
       case ThisTypeInfo(sym)            => s"$sym"
       case TypeRefInfo(tpe, sym, targs) => s"$sym${if (targs.isEmpty) "" else targs.mkString("[", ", ", "]")}"
+      case t: RefinedTypeInfo           => t.parents.mkString(" with ")
+      case t: ExistentialTypeInfo       => s"${t.tpe} forSome ${t.syms.mkString(", ")}"
       case SymAnnotInfo(sym, tpe)       => s"@$tpe $sym"
       case UnknownType(tag)             => s"UnknownType(${tag2string(tag)})"
       case UnknownEntry(tag)            => s"UnknownEntry(${tag2string(tag)})"
@@ -272,14 +323,15 @@ object MimaUnpickler {
     }
   }
 
-  final case class SymbolInfo(tag: Int, name: Name, owner: SymInfo, flags: Long, isScopedPrivate: Boolean) extends SymInfo {
+  final case class SymbolInfo(tag: Int, name: Name, owner: SymInfo, flags: Long, isScopedPrivate: Boolean, infoRef: Int)
+      extends SymInfo {
     def hasFlag(flag: Long): Boolean = (flags & flag) != 0L
     def isModuleOrModuleClass        = hasFlag(Flags.MODULE_PKL)
     def isParam                      = hasFlag(Flags.PARAM)
     def isClassPrivate               = hasFlag(Flags.PRIVATE)
     def isSealed                     = hasFlag(Flags.SEALED)
   }
-  val NoSymbol: SymbolInfo = SymbolInfo(NONEsym, nme.NoSymbol, null, 0, false)
+  val NoSymbol: SymbolInfo = SymbolInfo(NONEsym, nme.NoSymbol, null, 0, false, -1)
 
   final case class ExtInfo(tag: Int, name: Name, owner: SymInfo) extends SymInfo
 
@@ -289,6 +341,8 @@ object MimaUnpickler {
 
   final case class ThisTypeInfo(sym: SymInfo)                                      extends TypeInfo
   final case class TypeRefInfo(tpe: TypeInfo, sym: SymInfo, targs: List[TypeInfo]) extends TypeInfo
+  final case class RefinedTypeInfo(parents: List[TypeInfo])                        extends TypeInfo
+  final case class ExistentialTypeInfo(tpe: TypeInfo, syms: List[SymInfo])         extends TypeInfo
   final case class SymAnnotInfo(sym: SymbolInfo, tpe: TypeInfo)                    extends Entry
 
   def readNat(data: Array[Byte]): Int = {

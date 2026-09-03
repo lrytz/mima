@@ -218,13 +218,15 @@ object Lib { def go: C = new C }
 `bar` breaks it. MiMa reports changes to `C` and to its public members. A
 qualified-private class that never reaches a public signature is ignored.
 
-Escape detection reads bytecode, so it misses a class that leaks only through a
-type alias or an abstract type member, which leave no trace there:
+Escape detection reads the bytecode and the pickle, so it sees a class that leaks
+only through a type alias or the bound of an abstract type member, neither of which
+the classfile mentions, whatever shape the alias takes:
 
 ```scala
 object t {
   private[t] class C
-  type K = C // no mention of K in the classfile
+  type K = C  // no mention of K in the classfile
+  type L <: C // nor of L
 }
 ```
 

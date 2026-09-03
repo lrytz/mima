@@ -25,6 +25,7 @@ object MimaSettings {
       // * com.typesafe.tools.mima.core.*Problem
       // * com.typesafe.tools.mima.core.util.log.Logging
 
+      ProblemFilters.exclude[Problem]("com.typesafe.tools.mima.core.MimaUnpickler*"),
       ProblemFilters.exclude[Problem]("com.typesafe.tools.mima.core.TastyUnpickler*"),
     ),
   )

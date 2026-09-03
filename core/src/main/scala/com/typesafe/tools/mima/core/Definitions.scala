@@ -27,6 +27,24 @@ private[mima] final class Definitions(val classPath: ClassPath) {
     loop(root, name.split("\\.").toList)
   }
 
+  /** Return the class an alias names, NoClass where the classpath has no such class.
+   *
+   *  The Scala 2 pickle cannot tell the object a class sits in from a package, so it
+   *  writes a dot for both: `foo.Holder.Inner` is the class `foo.Holder$Inner`. The
+   *  package tree settles it - what it does not hold as a package starts the class.
+   */
+  def fromAliasName(name: String): ClassInfo = {
+    @tailrec def loop(pkg: PackageInfo, parts: List[String]): ClassInfo = parts match {
+      case Nil      => NoClass
+      case p :: rem =>
+        pkg.packages.get(p) match {
+          case Some(sub) if rem.nonEmpty => loop(sub, rem)
+          case _                         => pkg.classes.getOrElse(parts.mkString("$"), NoClass)
+        }
+    }
+    loop(root, name.split("\\.").toList)
+  }
+
   /** Return the type corresponding to this descriptor.
    *  Class names are resolved relative to the current classpath.
    */
