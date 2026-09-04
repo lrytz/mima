@@ -1,7 +1,8 @@
 package com.typesafe.tools.mima.core
 
 object MemberInfo {
-  val ConstructorName = "<init>"
+  val ConstructorName      = "<init>"
+  val ClassInitializerName = "<clinit>"
 }
 
 sealed abstract class MemberInfo(val owner: ClassInfo, val bytecodeName: String, val flags: Int, val descriptor: String)
@@ -74,16 +75,17 @@ private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, fla
   def parametersDesc: String                  = descriptor.substring(1, descriptor.indexOf(")"))
   def matchesType(other: MethodInfo): Boolean = parametersDesc == other.parametersDesc
 
-  private def isDefaultGetter: Boolean   = decodedName.contains("$default$")
-  private def isTraitInit: Boolean       = decodedName == "$init$"
-  private def isExtensionMethod: Boolean = {
+  private def isDefaultGetter: Boolean    = decodedName.contains("$default$")
+  private def isTraitInit: Boolean        = decodedName == "$init$"
+  private def isClassInitializer: Boolean = bytecodeName == MemberInfo.ClassInitializerName
+  private def isExtensionMethod: Boolean  = {
     var i = decodedName.length - 1
     while (i >= 0 && Character.isDigit(decodedName.charAt(i)))
       i -= 1
     decodedName.substring(0, i + 1).endsWith("$extension")
   }
   def nonAccessible: Boolean = {
-    !isPublic || isScopedPrivate || isClassPrivate || isSynthetic ||
+    !isPublic || isScopedPrivate || isClassPrivate || isSynthetic || isClassInitializer ||
     (hasSyntheticName && !(isExtensionMethod || isDefaultGetter || isTraitInit))
   }
   def isScopedPrivate: Boolean = scopedPrivate
