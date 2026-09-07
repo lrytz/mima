@@ -35,7 +35,7 @@ After doing that, `reload` if you are in an `sbt` shell session (if that makes n
 
 Tests within the `functional-tests` folder should always pass.
 
-Note: The `problems.txt` is the test oracle. Expected errors are declared using the MiMa's reporting output (i.e., the output of the tool and the expected errors should match perfectly). Admittedly, this coupling is an issue since the testing framework is highly coupled with the tool output used to report errors to the user. We should improve this and make the two independent. Until then, mind that by changing the output of the tool you will likely have to update some of the test oracles (i.e., problems.txt file). If the problems reported are different in Scala 2.11 or 2.12, compared to Scala 2.13, then you may use a `problems-2.11.txt` or `problems-2.12.txt` file.
+Note: The `problems.txt` is the test oracle. Expected errors are declared using the MiMa's reporting output (i.e., the output of the tool and the expected errors should match perfectly). Admittedly, this coupling is an issue since the testing framework is highly coupled with the tool output used to report errors to the user. We should improve this and make the two independent. Until then, mind that by changing the output of the tool you will likely have to update some of the test oracles (i.e., problems.txt file). If the problems reported are different in Scala 2.12, compared to Scala 2.13, then you may use a `problems-2.12.txt` file.
 
 The functional tests also include `app` sources (typically an `app/App.scala`) which exercises the library code.
 In more detail, it confirms that if no problems are expected (`problem.txt` is empty, after removing comments)

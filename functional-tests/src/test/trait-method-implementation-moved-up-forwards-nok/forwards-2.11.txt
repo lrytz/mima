@@ -1,2 +1,0 @@
-# the old encoding puts the implementation in foo.I$class, which v1 does not have at all
-method m()Int in trait foo.I does not have a correspondent in other version

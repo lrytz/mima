@@ -58,7 +58,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scala: [2.11, 2.12, 2.13, 3]
+        scala: [2.12, 2.13, 3]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

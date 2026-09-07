@@ -10,12 +10,11 @@ import scala.util.{ Properties => StdLibProps }
 
 object TestCli {
   // Keep in sync with build.sbt
-  val scala211 = "2.11.12"
   val scala212 = "2.12.21"
   val scala213 = "2.13.18"
   val scala3 = "3.3.8"
   val hostScalaVersion = StdLibProps.scalaPropOrNone("maven.version.number").get
-  val allScalaVersions = List(scala211, scala212, scala213, scala3)
+  val allScalaVersions = List(scala212, scala213, scala3)
   val testsDir = Directory("functional-tests/src/test")
 
   def argsToTests(args: List[String], runTestCase: TestCase => Try[Unit]): Tests =
@@ -56,7 +55,6 @@ object TestCli {
     case "-3" :: xs                    => readArgs(xs, conf.copy(scalaVersions = conf.scalaVersions :+ scala3))
     case "-2.13" :: xs                 => readArgs(xs, conf.copy(scalaVersions = conf.scalaVersions :+ scala213))
     case "-2.12" :: xs                 => readArgs(xs, conf.copy(scalaVersions = conf.scalaVersions :+ scala212))
-    case "-2.11" :: xs                 => readArgs(xs, conf.copy(scalaVersions = conf.scalaVersions :+ scala211))
     case "--scala-version" :: sv :: xs => readArgs(xs, conf.copy(scalaVersions = conf.scalaVersions :+ sv))
     case "--cross" :: xs               => readArgs(xs, conf.copy(scalaVersions = allScalaVersions))
     case s :: xs                       => readArgs(xs, conf.copy(dirs = testDirs(s) ::: conf.dirs))

@@ -1,2 +1,0 @@
-method bar_=(Int)Unit in trait A is present only in new version
-method bar()Int in trait A is present only in new version
