@@ -35,7 +35,7 @@ val sbtNewest = if (sbt2) "2.0.8" else "1.13.0"
 
 addCommandAlias(
   "scriptedOldest",
-  s"""set sbtplugin/scriptedSbt := "$sbtOldest"; sbtplugin/scripted sbt-mima-plugin/minimal""")
+  s"""set sbtplugin/scriptedSbt := "$sbtOldest"; show sbtplugin/scriptedSbt; sbtplugin/scripted sbt-mima-plugin/minimal""")
 
 def compilerOptions(scalaVersion: String): Seq[String] =
   Seq(

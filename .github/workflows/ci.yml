@@ -59,12 +59,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # the 3.9 compiler needs JDK 17
+        # the 3.9 and 3.10 compilers need JDK 17
         include:
-          - { scala: 2.12, java: 8 }
-          - { scala: 2.13, java: 8 }
-          - { scala: 3.3, java: 8 }
-          - { scala: 3.9, java: 17 }
+          - { scala: "2.12", java: 8 }
+          - { scala: "2.13", java: 8 }
+          - { scala: "3.3", java: 8 }
+          - { scala: "3.9", java: 17 }
+          - { scala: "3.10", java: 17 }
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
