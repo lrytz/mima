@@ -124,14 +124,17 @@ object TastyUnpickler {
     }
 
     def doMethods(tmpl: Template) = {
-      val clazz = currentClass
-      (tmpl.fields ::: tmpl.meths).iterator
-        .toSeq.groupBy(_.name).foreach { case (name, pickleMethods) =>
-          doMethodOverloads(clazz, name, pickleMethods)
-          // the class of static forwarders carries no pickle, so mark it from the object's
-          if (clazz.isModuleClass && !pickledClasses(clazz.module))
-            doMethodOverloads(clazz.module, name, pickleMethods)
-        }
+      val clazz    = currentClass
+      val byName   = (tmpl.fields ::: tmpl.meths).iterator.toSeq.groupBy(_.name)
+      val declared = byName.keysIterator.map(_.source).toSet
+      for (m <- clazz.methods.value if !declared(m.bytecodeName))
+        m.absentFromPickle = true
+      byName.foreach { case (name, pickleMethods) =>
+        doMethodOverloads(clazz, name, pickleMethods)
+        // the class of static forwarders carries no pickle, so mark it from the object's
+        if (clazz.isModuleClass && !pickledClasses(clazz.module))
+          doMethodOverloads(clazz.module, name, pickleMethods)
+      }
     }
 
     def doMethodOverloads(clazz: ClassInfo, name: Name, pickleMethods: Seq[TermMemberDef]) = {
