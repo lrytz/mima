@@ -29,7 +29,7 @@ private[analyze] object MethodChecker {
       if (oldmeth.isDeferred)
         checkExisting1Impl(oldmeth, newclazz, _.lookupMethods(oldmeth))
       else
-        checkExisting1Impl(oldmeth, newclazz, _.lookupClassMethods(oldmeth))
+        checkExisting1Impl(oldmeth, newclazz, c => c.lookupClassMethods(oldmeth) ++ c.lookupConcreteInterfaceMethods(oldmeth))
     } else {
       if (oldmeth.owner.hasStaticImpl(oldmeth))
         checkStaticImplMethod(oldmeth, newclazz)
