@@ -121,8 +121,12 @@ final class TestCase(val baseDir: Directory, val scalaCompiler: ScalaCompiler, v
   def blankFile(p: Path): Boolean = p.toFile.lines().forall(_.startsWith("#"))
 
   /** Scala 3 output differs between the LTS and the current release, so an oracle can name the
-   *  minor: `problems-3.9.txt` wins over `problems-3.txt`, which wins over `problems.txt`. */
-  private def scala3Minor = scalaCompiler.version.split('.').take(2).mkString(".")
+   *  minor, and a later minor falls back to an earlier one the way 2.13 falls back to 2.12:
+   *  on 3.10, `problems-3.10.txt` wins over `problems-3.9.txt` over `problems-3.txt`. */
+  private def scala3Minors = {
+    val minor = scalaCompiler.version.split('.')(1).toInt
+    (minor to 0 by -1).map(m => s"3.$m").toList
+  }
 
   def versionedFile(path: Path) = {
     val p                   = baseDir.resolve(path).toFile
@@ -130,7 +134,7 @@ final class TestCase(val baseDir: Directory, val scalaCompiler: ScalaCompiler, v
     val candidates          = scalaBinaryVersion match {
       case "2.12" => List("2.12")
       case "2.13" => List("2.13", "2.12")
-      case "3"    => List(scala3Minor, "3")
+      case "3"    => scala3Minors :+ "3"
       case _      => Nil
     }
     candidates.map(suffixed).find(_.exists).getOrElse(p)

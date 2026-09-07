@@ -1,0 +1,2 @@
+# 3.10 names the boxed type in a type argument where earlier versions said java.lang.Object
+method foo()scala.Tuple2 in class A has a different generic signature in new version, where it is ()Lscala/Tuple2<Ljava/lang/Integer;Ljava/lang/String;>; rather than ()Lscala/Tuple2<Ljava/lang/String;Ljava/lang/Integer;>;. See https://github.com/scala-garden/mima#incompatiblesignatureproblem

@@ -14,8 +14,9 @@ object TestCli {
   val scala213 = "2.13.18"
   val scala3_3 = "3.3.8" // keep at LTS
   val scala3_9 = "3.9.0"
+  val scala3_10 = "3.10.0-RC1" // bump to the release when it is out
   val hostScalaVersion = StdLibProps.scalaPropOrNone("maven.version.number").get
-  val allScalaVersions = List(scala212, scala213, scala3_3, scala3_9)
+  val allScalaVersions = List(scala212, scala213, scala3_3, scala3_9, scala3_10)
   val testsDir = Directory("functional-tests/src/test")
 
   def argsToTests(args: List[String], runTestCase: TestCase => Try[Unit]): Tests =
@@ -53,6 +54,7 @@ object TestCli {
   final case class Conf(scalaVersions: List[String], dirs: List[Directory])
 
   @tailrec private def readArgs(args: List[String], conf: Conf): Conf = args match {
+    case "-3.10" :: xs                 => readArgs(xs, conf.copy(scalaVersions = conf.scalaVersions :+ scala3_10))
     case "-3.9" :: xs                  => readArgs(xs, conf.copy(scalaVersions = conf.scalaVersions :+ scala3_9))
     case "-3.3" :: xs                  => readArgs(xs, conf.copy(scalaVersions = conf.scalaVersions :+ scala3_3))
     case "-3" :: xs                    => readArgs(xs, conf.copy(scalaVersions = conf.scalaVersions :+ scala3_3))
