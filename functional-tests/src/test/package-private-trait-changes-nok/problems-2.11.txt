@@ -1,2 +1,0 @@
-method bar(Int)Int in trait foo.Foo does not have a correspondent in new version
-method bar(Int,Int)Int in trait foo.Foo is present only in new version
