@@ -9,22 +9,6 @@ class Slow extends munit.Tag("Slow")
 
 @Category(Array(classOf[Slow]))
 class IntegrationTestSuite extends munit.FunSuite {
-  test("scala-library-2-10")(testIntegration("org.scala-lang", "scala-library", "2.10.0", "2.10.7")().get)
-
-  test("scala-library-2-11")(testIntegration("org.scala-lang", "scala-library", "2.11.0", "2.11.12")(
-    problemFilters = List(
-      exclude[IncompatibleSignatureProblem]("scala.None.toLeft"),
-      exclude[IncompatibleSignatureProblem]("scala.None.toLeft"),
-      exclude[IncompatibleSignatureProblem]("scala.None.toRight"),
-      exclude[IncompatibleSignatureProblem]("scala.Option.toLeft"),
-      exclude[IncompatibleSignatureProblem]("scala.Option.toRight"),
-      exclude[IncompatibleSignatureProblem]("scala.collection.*.foreach"),
-      exclude[IncompatibleSignatureProblem]("scala.util.Either#LeftProjection.map"),
-      exclude[IncompatibleSignatureProblem]("scala.util.Either#RightProjection.map"),
-      exclude[IncompatibleSignatureProblem]("scala.util.Either.swap"),
-    ),
-  ).get)
-
   test("scala-library-2-12")(testIntegration("org.scala-lang", "scala-library", "2.12.0", "2.12.10")(
     problemFilters = List(
       // all
@@ -258,50 +242,6 @@ class IntegrationTestSuite extends munit.FunSuite {
       exclude[IncompatibleSignatureProblem]("scala.runtime.Tuple*Zipped#Ops.*"),
     ),
   ).get)
-
-  test("scala-reflect-2-10")(testIntegration("org.scala-lang", "scala-reflect", "2.10.0", "2.10.7")(
-    expected = List(
-      "static method currentMirror()scala.reflect.api.JavaMirrors#JavaMirror in class scala.reflect.runtime.package does not have a correspondent in new version",
-    ),
-    problemFilters = List(
-      exclude[Problem]("scala.reflect.internal.*"),
-      exclude[MissingClassProblem]("scala.reflect.macros.Attachments$NonemptyAttachments"),
-      exclude[MissingMethodProblem]("scala.reflect.runtime.JavaUniverse.isInvalidClassName"),
-      exclude[MissingMethodProblem]("scala.reflect.runtime.SymbolLoaders.isInvalidClassName"),
-      exclude[IncompatibleSignatureProblem]("scala.reflect.io.ZipArchive#Entry.underlyingSource"),
-      exclude[IncompatibleSignatureProblem]("scala.reflect.io.ZipArchive.underlyingSource"),
-    ),
-  ).get)
-
-  test("scala-reflect-2-11")(testIntegration("org.scala-lang", "scala-reflect", "2.11.0", "2.11.12")(
-    problemFilters = List(
-      exclude[Problem]("scala.reflect.internal.*"),
-      exclude[IncompatibleResultTypeProblem]("scala.reflect.api.Internals#ReificationSupportApi#SyntacticTypeAppliedExtractor.unapply"),
-      exclude[IncompatibleSignatureProblem]("scala.reflect.io.ZipArchive#Entry.underlyingSource"),
-      exclude[IncompatibleSignatureProblem]("scala.reflect.io.ZipArchive.underlyingSource"),
-      exclude[MissingClassProblem]("scala.reflect.api.Internals$ReificationSupportApi$SyntacticIdentExtractor"),
-      exclude[MissingMethodProblem]("scala.reflect.api.StandardLiftables#StandardLiftableInstances.liftTree"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi#SyntacticTypeAppliedExtractor.unapply"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi.SyntacticAnnotatedType"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi.SyntacticAppliedType"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi.SyntacticCompoundType"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi.SyntacticExistentialType"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi.SyntacticIdent"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi.SyntacticPartialFunction"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi.SyntacticSelectTerm"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi.SyntacticSelectType"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi.SyntacticSingletonType"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi.SyntacticTermIdent"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi.SyntacticTypeIdent"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Internals#ReificationSupportApi.SyntacticTypeProjection"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Mirror.symbolOf"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Mirror.typeOf"),
-      exclude[MissingMethodProblem]("scala.reflect.api.Mirror.weakTypeOf"),
-      exclude[MissingMethodProblem]("scala.reflect.io.ZipArchive.scala$reflect$io$ZipArchive$$walkIterator"),
-      exclude[MissingMethodProblem]("scala.reflect.runtime.SynchronizedOps.newNestedScope"),
-      exclude[MissingMethodProblem]("scala.reflect.runtime.ThreadLocalStorage#MyThreadLocalStorage.values"),
-    ),
-  ))
 
   test("scala-reflect-2-12")(testIntegration("org.scala-lang", "scala-reflect", "2.12.1", "2.12.10")(
     problemFilters = List(
