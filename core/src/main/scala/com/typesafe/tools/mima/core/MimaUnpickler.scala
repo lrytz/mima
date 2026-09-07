@@ -225,6 +225,11 @@ object MimaUnpickler {
         if (clsSym.isScopedPrivate) {
           cls._scopedPrivate = true
           if (clsSym.isModuleOrModuleClass && !pickledClasses(cls.module)) cls.module._scopedPrivate = true
+          // the accessor of a nested object is only as accessible as the object; the pickle
+          // has no method symbol for it, so it would otherwise let the object escape
+          if (clsSym.isModuleOrModuleClass)
+            for (m <- cls.outer.methods.value if m.descriptor == s"()L${cls.fullName};")
+              m.scopedPrivate = true
         }
       }
       doMethods(cls, methSyms.filter(_.owner == clsSym).toList)
