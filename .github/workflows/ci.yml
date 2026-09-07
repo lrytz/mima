@@ -21,7 +21,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [8, 17]
+        include:
+          - { java: 8 }
+          - { java: 17, sbt2: -Dmima.sbt2 } # the sbt 2 plugin, which needs Scala 3.8
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -31,17 +33,16 @@ jobs:
           java-version: ${{matrix.java}}
           cache: sbt
       - uses: sbt/setup-sbt@v1
-      - run: sbt +test +mimaReportBinaryIssues
-      # use of an old sbt version, as a smoke test. only on 2.12.
-      - run: sbt ++2.12.x 'set sbtplugin/scriptedSbt := "1.5.8"' 'sbtplugin/scripted sbt-mima-plugin/minimal'
-        if: matrix.java == 8
+      - run: sbt ${{matrix.sbt2}} +test +mimaReportBinaryIssues
 
   scripted:
     needs: test
     strategy:
       fail-fast: false
       matrix:
-        java: [8, 17]
+        include:
+          - { java: 8 }
+          - { java: 17, sbt2: -Dmima.sbt2 } # the sbt 2 plugin, which needs Scala 3.8
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -51,21 +52,26 @@ jobs:
           java-version: ${{matrix.java}}
           cache: sbt
       - uses: sbt/setup-sbt@v1
-      - run: sbt +sbtplugin/scripted
+      - run: sbt ${{matrix.sbt2}} +sbtplugin/scripted scriptedOldest
 
   functional-tests:
     needs: test
     strategy:
       fail-fast: false
       matrix:
-        scala: [2.12, 2.13, 3]
+        # the 3.9 compiler needs JDK 17
+        include:
+          - { scala: 2.12, java: 8 }
+          - { scala: 2.13, java: 8 }
+          - { scala: 3.3, java: 8 }
+          - { scala: 3.9, java: 17 }
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 8
+          java-version: ${{matrix.java}}
           cache: sbt
       - uses: sbt/setup-sbt@v1
       - run: sbt ++2.12.x "functional-tests/runMain com.typesafe.tools.mima.lib.UnitTests -${{matrix.scala}}"

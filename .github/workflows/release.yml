@@ -9,7 +9,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [8, 17]
+        include:
+          - { java: 8 }
+          - { java: 17, sbt2: -Dmima.sbt2 } # publishes the sbt 2 plugin, and nothing else
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -21,7 +23,7 @@ jobs:
           java-version: ${{matrix.java}}
           cache: sbt
       - uses: sbt/setup-sbt@v1
-      - run: sbt ci-release
+      - run: sbt ${{matrix.sbt2}} ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}

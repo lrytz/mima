@@ -1,0 +1,3 @@
+# 3.9 reports what problems-3.txt says is missing on Scala 3, so it matches Scala 2 again
+abstract method foo()Int in class B does not have a correspondent in new version
+in new version there is abstract method foo()Int in class B, which does not have a correspondent

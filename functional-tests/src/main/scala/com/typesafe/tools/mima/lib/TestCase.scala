@@ -120,17 +120,20 @@ final class TestCase(val baseDir: Directory, val scalaCompiler: ScalaCompiler, v
 
   def blankFile(p: Path): Boolean = p.toFile.lines().forall(_.startsWith("#"))
 
+  /** Scala 3 output differs between the LTS and the current release, so an oracle can name the
+   *  minor: `problems-3.9.txt` wins over `problems-3.txt`, which wins over `problems.txt`. */
+  private def scala3Minor = scalaCompiler.version.split('.').take(2).mkString(".")
+
   def versionedFile(path: Path) = {
-    val p    = baseDir.resolve(path).toFile
-    val p212 = (p.parent / (s"${p.stripExtension}-2.12")).addExtension(p.extension).toFile
-    val p213 = (p.parent / (s"${p.stripExtension}-2.13")).addExtension(p.extension).toFile
-    val p3   = (p.parent / (s"${p.stripExtension}-3")).addExtension(p.extension).toFile
-    scalaBinaryVersion match {
-      case "2.12" => if (p212.exists) p212 else p
-      case "2.13" => if (p213.exists) p213 else if (p212.exists) p212 else p
-      case "3"    => if (p3.exists) p3 else p
-      case _      => p
+    val p                   = baseDir.resolve(path).toFile
+    def suffixed(v: String) = (p.parent / s"${p.stripExtension}-$v").addExtension(p.extension).toFile
+    val candidates          = scalaBinaryVersion match {
+      case "2.12" => List("2.12")
+      case "2.13" => List("2.13", "2.12")
+      case "3"    => List(scala3Minor, "3")
+      case _      => Nil
     }
+    candidates.map(suffixed).find(_.exists).getOrElse(p)
   }
 
   def recreateDir(dir: Directory): Unit = {
