@@ -165,6 +165,12 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def lookupMethods(method: MethodInfo): Iterator[MethodInfo] =
     lookupClassMethods(method) ++ lookupInterfaceMethods(method)
 
+  /** The default methods a class inherits: since Java 8 an invokevirtual resolves through the
+   *  superinterfaces, so these stand in for a method the class does not declare itself. */
+  final def lookupConcreteInterfaceMethods(method: MethodInfo): Iterator[MethodInfo] =
+    if (method.isStatic) Iterator.empty // static interface methods are not inherited
+    else allInterfaces.iterator.flatMap(_.concreteMethods).filter(_.bytecodeName == method.bytecodeName)
+
   final def lookupConcreteTraitMethods(method: MethodInfo): Iterator[MethodInfo] =
     allTraits.iterator.flatMap(_.concreteMethods).filter(_.bytecodeName == method.bytecodeName)
 
