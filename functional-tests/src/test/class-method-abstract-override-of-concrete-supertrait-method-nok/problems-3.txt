@@ -1,6 +1,5 @@
 in new version there is abstract method foo()Int in class B, which does not have a correspondent
-# what's missing is:
-#     abstract method foo()Int in class B does not have a correspondent in new version
-# which is a `DirectAbstractMethodProblem`, rather than the above `ReversedAbstractMethodProblem`
-# not sure exactly what that means... ¯\_(ツ)_/¯
-# https://github.com/scala-garden/mima/issues/590
+# The DirectAbstractMethodProblem that Scala 2 also reports is missing here because up to 3.3
+# dotty flags B's mixin forwarder ACC_BRIDGE | ACC_SYNTHETIC, and of the two checks only
+# checkExisting1 filters synthetic methods, so it never compares v1's concrete foo against v2's
+# abstract one. 3.9 stopped flagging the forwarder: see problems-3.9.txt.

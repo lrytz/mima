@@ -1,7 +1,5 @@
 import mimabuild.*
 
-import scala.util.Properties
-
 inThisBuild(Seq(
   organization := "com.typesafe",
   licenses := Seq(License.Apache2),
@@ -23,9 +21,21 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
   scalacOptions ++= compilerOptions(scalaVersion.value),
 )
 
-val isJdk17inCI = Properties.isJavaAtLeast("17") && sys.env.contains("CI") // to split released artifacts by JDK
+// The sbt 2 plugin needs Scala 3.8 and JDK 17; the rest of the build targets Java 8. `-Dmima.sbt2`
+// picks that half, which is how the release splits across two JDKs.
+val sbt2 = sys.props.contains("mima.sbt2")
 
-def skipIfJdk17inCI[T](obj: => Seq[T]): Seq[T] = if (isJdk17inCI) Seq.empty else obj
+def unlessSbt2[T](obj: => Seq[T]): Seq[T] = if (sbt2) Seq.empty else obj
+
+// The plugin is compiled against the oldest sbt it supports, so that it cannot reach for a newer
+// API, and its scripted tests run on the newest, where its users are. `scriptedOldest` runs one of
+// them on the oldest too, so that the support claim stays tested.
+val sbtOldest = if (sbt2) "2.0.7" else "1.5.8"
+val sbtNewest = if (sbt2) "2.0.8" else "1.13.0"
+
+addCommandAlias(
+  "scriptedOldest",
+  s"""set sbtplugin/scriptedSbt := "$sbtOldest"; sbtplugin/scripted sbt-mima-plugin/minimal""")
 
 def compilerOptions(scalaVersion: String): Seq[String] =
   Seq(
@@ -65,7 +75,7 @@ val munit = Def.setting("org.scalameta" %%% "munit" % "1.3.6")
 
 val core = crossProject(JVMPlatform, NativePlatform).crossType(CrossType.Pure).settings(commonSettings).settings(
   name := "mima-core",
-  crossScalaVersions := skipIfJdk17inCI(Seq(scala212, scala213, scala3_3)),
+  crossScalaVersions := unlessSbt2(Seq(scala212, scala213, scala3_3)),
   libraryDependencies += munit.value % Test,
   MimaSettings.mimaSettings,
   apiMappings ++= {
@@ -86,7 +96,7 @@ val cli = crossProject(JVMPlatform)
   .settings(commonSettings)
   .settings(
     name := "mima-cli",
-    crossScalaVersions := skipIfJdk17inCI(Seq(scala212, scala213, scala3_3)),
+    crossScalaVersions := unlessSbt2(Seq(scala212, scala213, scala3_3)),
     libraryDependencies += munit.value % Test,
     mimaFailOnNoPrevious := false,
   )
@@ -94,13 +104,9 @@ val cli = crossProject(JVMPlatform)
 
 val sbtplugin = project.enablePlugins(SbtPlugin).dependsOn(core.jvm).settings(commonSettings).settings(
   name := "sbt-mima-plugin",
-  crossScalaVersions := { if (isJdk17inCI) Seq(scala3_8) else Seq(scala212) },
-  (pluginCrossBuild / sbtVersion) := {
-    scalaBinaryVersion.value match {
-      case "2.12" => "1.5.8"
-      case _      => "2.0.7"
-    }
-  },
+  crossScalaVersions := Seq(if (sbt2) scala3_8 else scala212),
+  (pluginCrossBuild / sbtVersion) := sbtOldest,
+  scriptedSbt := sbtNewest,
   // drop the previous value to drop running Test/compile
   scriptedDependencies := Def.task(()).dependsOn(publishLocal, core.jvm / publishLocal).value,
   scriptedLaunchOpts += s"-Dplugin.version=${version.value}",
@@ -114,7 +120,7 @@ val functionalTests = Project("functional-tests", file("functional-tests"))
   .dependsOn(core.jvm)
   .settings(commonSettings)
   .settings(
-    crossScalaVersions := skipIfJdk17inCI(Seq(scala212, scala213)),
+    crossScalaVersions := unlessSbt2(Seq(scala212, scala213)),
     publish / skip := true,
     libraryDependencies += "io.get-coursier" %% "coursier" % "2.1.24",
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
@@ -128,7 +134,7 @@ val integrationTests = Project("integration-tests", file("integration-tests"))
   .dependsOn(functionalTests % "compile->compile")
   .settings(commonSettings)
   .settings(
-    crossScalaVersions := skipIfJdk17inCI(Seq(scala212, scala213)),
+    crossScalaVersions := unlessSbt2(Seq(scala212, scala213)),
     publish / skip := true,
     libraryDependencies += munit.value,
     Test / unmanagedSourceDirectories := Seq((functionalTests / baseDirectory).value / "src" / "it" / "scala"),
