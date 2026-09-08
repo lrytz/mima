@@ -1,1 +1,1 @@
-abstract method foo()Unit in interface B is inherited by class A in new version.
+abstract method foo()Unit in trait B is inherited by class A in new version.

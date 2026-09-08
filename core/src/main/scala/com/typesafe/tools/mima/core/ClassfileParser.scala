@@ -54,11 +54,12 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
     var runtimeAnnotStart = -1
     parseAttributes {
       case RuntimeAnnotationATTR => runtimeAnnotStart = in.bp
-      case ScalaSignatureATTR    => isScala = true
+      case ScalaSignatureATTR    => isScala = true; clazz._isScala = true
+      case ScalaATTR             => clazz._isScala = true
       case EnclosingMethodATTR   => clazz._isLocalClass = true
       case InnerClassesATTR      => clazz._innerClasses = parseInnerClasses(clazz)
       case SignatureATTR         => clazz._signature = Signature(pool.getName(in.nextChar))
-      case TASTYATTR             => parseTasty(clazz)
+      case TASTYATTR             => clazz._isScala = true; parseTasty(clazz)
       case _                     =>
     }
     if (isScala)
@@ -158,9 +159,12 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
   private final val EnclosingMethodATTR   = "EnclosingMethod"
   private final val InnerClassesATTR      = "InnerClasses"
   private final val RuntimeAnnotationATTR = "RuntimeVisibleAnnotations"
-  private final val ScalaSignatureATTR    = "ScalaSig"
-  private final val SignatureATTR         = "Signature"
-  private final val TASTYATTR             = "TASTY"
+  // every classfile scalac emits carries one of these: the top-level class of a compilation
+  // unit holds the pickle, the rest just the marker
+  private final val ScalaATTR          = "Scala"
+  private final val ScalaSignatureATTR = "ScalaSig"
+  private final val SignatureATTR      = "Signature"
+  private final val TASTYATTR          = "TASTY"
 }
 
 object ClassfileParser {

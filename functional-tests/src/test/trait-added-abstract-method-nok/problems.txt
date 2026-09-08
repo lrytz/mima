@@ -1,1 +1,1 @@
-abstract method foo()Unit in interface A is present only in new version
+abstract method foo()Unit in trait A is present only in new version

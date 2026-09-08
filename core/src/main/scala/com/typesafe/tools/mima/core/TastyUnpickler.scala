@@ -48,7 +48,8 @@ object TastyUnpickler {
 
     def currentClass: ClassInfo = {
       val pkgName = pkgNames.headOption.getOrElse(nme.Empty)
-      if (pkgName.source == pkgInfo.fullName) {
+      // TASTy calls the root package `<empty>`, PackageInfo calls it `<root>`
+      if (pkgName.source == pkgInfo.fullName || (pkgName.source == "<empty>" && pkgInfo.isRoot)) {
         val clsName0 = clsNames.reverseIterator.mkString("$")
 
         val clsName = clsNames match {
