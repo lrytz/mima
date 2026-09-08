@@ -43,14 +43,12 @@ increasingly important. Another tool,
 automatically check TASTy compatibility in much the same way that MiMa checks
 binary compatibility.
 
-Keep in mind that TASTy-MiMa is still young, as of early 2023. It is likely to
-contain bugs.
-
 ## Usage
 
 ### SBT
 
-MiMa's sbt plugin supports sbt 1.x and 2.x.
+MiMa checks Scala 2.12, 2.13 and 3 artifacts. Its sbt plugin supports sbt 1.x and
+sbt 2.0.7 or newer.
 
 To use it add the following to your `project/plugins.sbt` file:
 
@@ -220,7 +218,7 @@ qualified-private class that never reaches a public signature is ignored.
 
 Escape detection reads the bytecode and the pickle, so it sees a class that leaks
 only through a type alias or the bound of an abstract type member, neither of which
-the classfile mentions, whatever shape the alias takes:
+the classfile mentions:
 
 ```scala
 object t {
@@ -277,7 +275,7 @@ mimaPreviousArtifacts := {
 }
 ```
 
-or perhaps using some of sbt 1.2's new API:
+or with sbt's semantic version selectors:
 
 ```scala
 import sbt.librarymanagement.{ SemanticSelector, VersionNumber }
