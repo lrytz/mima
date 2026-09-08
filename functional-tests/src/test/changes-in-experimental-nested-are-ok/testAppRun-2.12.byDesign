@@ -1,1 +1,3 @@
-# Haven't implemented the ScalaSig unpickling part, only TASTy
+Adding an abstract member breaks implementors of the trait, and nothing in the fixture calls
+it, so no app can fail. Only TASTy carries the excluded annotation, so 2.12 and 2.13 report
+what problems-2.12.txt lists while Scala 3 stays silent.

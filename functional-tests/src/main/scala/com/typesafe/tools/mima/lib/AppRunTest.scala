@@ -19,7 +19,8 @@ object AppRunTest {
     // `.pending` says mima gets this one wrong and should be fixed.
     byDesign = testCase.versionedFile("testAppRun.byDesign").exists
     pending  = testCase.versionedFile("testAppRun.pending").exists || byDesign
-    expectOk = testCase.blankFile(testCase.versionedFile(oracleFile))
+    oracle   = testCase.versionedFile(oracleFile)
+    expectOk = testCase.blankFile(oracle)
 //    () <- testCase.compileApp(v2)      // compile app with v2
 //    () <- testCase.runMain(v2)         // sanity check 1: run app with v2
     () <- testCase.compileApp(v1)      // recompile app with v1
@@ -28,9 +29,11 @@ object AppRunTest {
       case _                     => Success(())
     }
     () <- testCase.runMain(v2) match { // test: run app, compiled with v1, with v2
-      case Failure(t) if !pending && expectOk   => Failure(t)
-      case Success(()) if !pending && !expectOk => Failure(new Exception("expected running App to fail"))
-      case _                                    => Success(())
+      case Failure(t) if !pending && expectOk =>
+        Failure(new Exception(s"running App failed, though ${oracle.name} lists no problems: $t", t))
+      case Success(()) if !pending && !expectOk =>
+        Failure(new Exception(s"expected running App to fail, since ${oracle.name} lists problems"))
+      case _ => Success(())
     }
   } yield ()
 }

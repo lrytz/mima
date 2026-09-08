@@ -1,0 +1,4 @@
+The change to Foo.foo is breaking, and the app does break on it. On Scala 3 mima stays
+silent because the harness passes mima.annotation.exclude as an excluded annotation, which
+is the point of the fixture. On 2.12 and 2.13 it reports instead, since only TASTy carries
+the annotation, so the app run there matches problems-2.12.txt and needs no marker.
