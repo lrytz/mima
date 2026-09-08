@@ -12,9 +12,6 @@ object Analyzer {
       oldclazz <- oldpkg.accessibleClasses.toList.sortBy(_.bytecodeName)
       _ = log.verbose(s"analyzing $oldclazz")
       _ = oldclazz.forceLoad
-      // if it is missing a trait implementation class, then no error should be reported
-      // since there should be already errors, i.e., missing methods...
-      if !oldclazz.isImplClass
       if !excludeAnnots.exists { annot =>
         oldclazz.outerChain.exists { cls =>
           cls.annotations.contains(annot) ||

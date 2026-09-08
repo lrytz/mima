@@ -16,10 +16,8 @@ private[analyze] object MethodChecker {
   private def checkNew(oldclazz: ClassInfo, newclazz: ClassInfo, excludeAnnots: List[AnnotInfo]): List[Problem] = {
     // these problems break a client that implements oldclazz, and nobody outside can
     if (oldclazz.isClosedHierarchy) return Nil
-    val problems1 = if (newclazz.isClass) Nil else checkEmulatedConcreteMethodsProblems(oldclazz, newclazz)
-    val problems2 = checkDeferredMethodsProblems(oldclazz, newclazz, excludeAnnots)
-    val problems3 = checkInheritedNewAbstractMethodProblems(oldclazz, newclazz, excludeAnnots)
-    problems1 ::: problems2 ::: problems3
+    checkDeferredMethodsProblems(oldclazz, newclazz, excludeAnnots) :::
+      checkInheritedNewAbstractMethodProblems(oldclazz, newclazz, excludeAnnots)
   }
 
   private def checkExisting1(oldmeth: MethodInfo, newclazz: ClassInfo, excludeAnnots: List[AnnotInfo]): Option[Problem] = {
@@ -31,9 +29,7 @@ private[analyze] object MethodChecker {
       else
         checkExisting1Impl(oldmeth, newclazz, c => c.lookupClassMethods(oldmeth) ++ c.lookupConcreteInterfaceMethods(oldmeth))
     } else {
-      if (oldmeth.owner.hasStaticImpl(oldmeth))
-        checkStaticImplMethod(oldmeth, newclazz)
-      else if (oldmeth.owner.hasMixinForwarder(oldmeth))
+      if (oldmeth.owner.hasMixinForwarder(oldmeth))
         checkStaticMixinForwarderMethod(oldmeth, newclazz)
       else
         checkExisting1Impl(oldmeth, newclazz, _.lookupMethods(oldmeth))
@@ -65,24 +61,6 @@ private[analyze] object MethodChecker {
       Some(VirtualStaticMemberProblem(oldmeth))
     else
       None
-  }
-
-  private def checkStaticImplMethod(oldmeth: MethodInfo, newclazz: ClassInfo) = {
-    if (newclazz.hasStaticImpl(oldmeth)) {
-      None // then it's ok, the method it is still there
-    } else {
-      // if a concrete method exists on some inherited trait, then we
-      // report the missing method but we can upgrade the bytecode for
-      // this specific issue
-      if (newclazz.allTraits.exists(_.hasStaticImpl(oldmeth))) {
-        Some(UpdateForwarderBodyProblem(oldmeth))
-      } else {
-        // otherwise we check all the concrete trait methods and report
-        // the missing or incompatible method.
-        val methsLookup = (_: ClassInfo).lookupConcreteTraitMethods(oldmeth)
-        Some(missingOrIncompatible(oldmeth, methsLookup(newclazz).toList, methsLookup))
-      }
-    }
   }
 
   private def checkStaticMixinForwarderMethod(oldmeth: MethodInfo, newclazz: ClassInfo) = {
@@ -118,26 +96,6 @@ private[analyze] object MethodChecker {
   private def uniques(methods: Iterable[MethodInfo]): List[MethodInfo] =
     methods.groupBy(_.parametersDesc).values.collect { case method :: _ => method }.toList
 
-  private def checkEmulatedConcreteMethodsProblems(oldclazz: ClassInfo, newclazz: ClassInfo): List[Problem] = {
-    for {
-      newmeth <- newclazz.emulatedConcreteMethods.iterator
-      if !oldclazz.hasStaticImpl(newmeth)
-      problem <- {
-        if (oldclazz.lookupMethods(newmeth).exists(_.descriptor == newmeth.descriptor)) {
-          // a static implementation for the same method existed already, therefore
-          // classes that mixed-in the trait already have a forwarder to the implementation
-          // class. Mind that, despite no binary incompatibility arises, program's
-          // semantic may be severely affected.
-          None
-        } else {
-          // this means that the method is brand new
-          // and therefore the implementation has to be injected
-          Some(ReversedMissingMethodProblem(newmeth))
-        }
-      }
-    } yield problem
-  }.toList
-
   private def checkDeferredMethodsProblems(oldclazz: ClassInfo, newclazz: ClassInfo, excludeAnnots: List[AnnotInfo]): List[Problem] = {
     for {
       newmeth <- newclazz.deferredMethods.iterator
@@ -161,7 +119,7 @@ private[analyze] object MethodChecker {
     for {
       newInheritedType <- diffInheritedTypes.iterator
       // if `newInheritedType` is a trait, then the trait's concrete methods should be counted as deferred methods
-      newDeferredMethod <- newInheritedType.deferredMethodsInBytecode
+      newDeferredMethod <- newInheritedType.deferredMethods
       if !excludeAnnots.exists(newDeferredMethod.annotations.contains)
       // checks that the newDeferredMethod did not already exist in one of the oldclazz supertypes
       if noInheritedMatchingMethod(oldclazz, newDeferredMethod)(_ => true) &&

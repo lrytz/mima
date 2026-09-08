@@ -141,17 +141,6 @@ sealed abstract class PackageInfo {
     loop(clazz => clazz.isTopLevel && !clazz.decodedName.contains("$$"))
   }
 
-  // Used to make sure trait classes have their impl class field set
-  final lazy val setImplClasses: Unit = {
-    for {
-      (name, clazz) <- classes.iterator
-      if clazz.isImplClass
-      traitClass <- classes.get(name.stripSuffix("$class"))
-    } {
-      traitClass._implClass = clazz
-    }
-  }
-
   // TODO: Foo contains pickle, so if parse Foo$ before should be able to set this then
   final lazy val setModules: Unit = {
     for {

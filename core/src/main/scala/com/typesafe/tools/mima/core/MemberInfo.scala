@@ -18,7 +18,7 @@ sealed abstract class MemberInfo(val owner: ClassInfo, val bytecodeName: String,
   def nonAccessible: Boolean
 
   final def fullName: String          = s"${owner.formattedFullName}.$decodedName"
-  final def abstractPrefix            = if (isDeferred && !owner.isTrait) "abstract " else ""
+  final def abstractPrefix            = if (isDeferred) "abstract " else ""
   final def scopedPrivatePrefix       = "private[..] "
   final def classPrivatePrefix        = "private "
   final def staticPrefix: String      = if (isStatic) "static " else ""
@@ -91,7 +91,7 @@ private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, fla
   /** A mixin forwarder scalac copies into a class drops the trait method's access:
    *  the bytecode says public where the source says `private[p]`. */
   private def isScopedPrivateMixinForwarder: Boolean =
-    absentFromPickle && !owner.isTrait && owner.allTraits.exists {
+    absentFromPickle && owner.allTraits.exists {
       _.methods.get(bytecodeName).exists(m => m.descriptor == descriptor && m.isScopedPrivate)
     }
   def nonAccessible: Boolean = {

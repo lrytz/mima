@@ -27,6 +27,18 @@ object MimaSettings {
 
       ProblemFilters.exclude[Problem]("com.typesafe.tools.mima.core.MimaUnpickler*"),
       ProblemFilters.exclude[Problem]("com.typesafe.tools.mima.core.TastyUnpickler*"),
+
+      // the 2.11 impl class encoding is gone. ClassInfo is private[mima] but escapes through
+      // PackageInfo.classes, so its members are checked.
+      ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.ClassInfo._implClass*"),
+      ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.ClassInfo.implClass"),
+      ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.ClassInfo.isTrait"),
+      ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.ClassInfo.isImplClass"),
+      ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.ClassInfo.hasStaticImpl"),
+      ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.ClassInfo.emulatedConcreteMethods"),
+      ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.ClassInfo.deferredMethodsInBytecode"),
+      ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.PackageInfo.setImplClasses"),
+      ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.NoPackageInfo.setImplClasses"),
     ),
   )
 }
