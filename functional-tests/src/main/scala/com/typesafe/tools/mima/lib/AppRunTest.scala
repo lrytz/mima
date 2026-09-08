@@ -13,8 +13,12 @@ object AppRunTest {
 
   def testAppRun1(testCase: TestCase, v1: Directory, v2: Directory, oracleFile: Path): Try[Unit] = for {
     () <- testCase.compileBoth
-    insane   = testCase.versionedFile("testAppRun.insane").exists
-    pending  = testCase.versionedFile("testAppRun.pending").exists
+    insane = testCase.versionedFile("testAppRun.insane").exists
+    // `.byDesign` says the app and the oracle disagree for a reason the file states: the app is
+    // not a client mima protects, or the problem it names can never be a linkage error.
+    // `.pending` says mima gets this one wrong and should be fixed.
+    byDesign = testCase.versionedFile("testAppRun.byDesign").exists
+    pending  = testCase.versionedFile("testAppRun.pending").exists || byDesign
     expectOk = testCase.blankFile(testCase.versionedFile(oracleFile))
 //    () <- testCase.compileApp(v2)      // compile app with v2
 //    () <- testCase.runMain(v2)         // sanity check 1: run app with v2
