@@ -1,0 +1,3 @@
+Scala 3 emits the static forwarder of a private[foo] method as public
+(https://github.com/scala/scala3/issues/10842), so mima sees a public method change.
+No client reaches it: the app calls the instance method, which mima passes over.

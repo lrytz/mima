@@ -48,6 +48,17 @@ an error at runtime (i.e. MiMa isn't reporting false positives).  Broken down in
 3. compile `v2`
 4. run the `app`, with a classpath that contains `v2` and not `v1`
 
+A fixture can opt out of step 4 with a marker file next to `problems.txt`, whose content says
+why:
+
+* `testAppRun.byDesign` — the app and the oracle disagree for a reason that is not a bug. The
+  app is not a client MiMa protects (it is Java, or declares a package of the library's own),
+  or the problem MiMa names can never be a linkage error.
+* `testAppRun.pending` — MiMa gets this one wrong and should be fixed.
+* `testAppRun.insane` — running the app against `v1` already fails, so that check is skipped.
+
+Each takes a version suffix like the oracles, e.g. `testAppRun-3.byDesign`.
+
 ## Other tests
 
 There are also a few other test types:
