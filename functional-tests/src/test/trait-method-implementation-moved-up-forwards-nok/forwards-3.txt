@@ -1,2 +1,2 @@
 # dotty emits no $init$ for a trait with no state
-method m()Int in interface foo.I does not have a correspondent in other version
+method m()Int in trait foo.I does not have a correspondent in other version

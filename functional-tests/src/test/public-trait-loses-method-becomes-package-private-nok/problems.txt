@@ -1,1 +1,1 @@
-method foo(java.lang.Object)java.lang.Object in interface bar.A does not have a correspondent in new version
+method foo(java.lang.Object)java.lang.Object in trait bar.A does not have a correspondent in new version

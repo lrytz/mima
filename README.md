@@ -68,7 +68,7 @@ and run `mimaReportBinaryIssues` to see something like the following:
 [info] Found 4 potential binary incompatibilities
 [error]  * method rollbackTransactionResource()resource.Resource in object resource.Resource does not have a   correspondent in new version
 [error]  * method now()scala.util.continuations.ControlContext in trait resource.ManagedResourceOperations does not    have a correspondent in old version
-[error]  * abstract method now()scala.util.continuations.ControlContext in interface resource.ManagedResource does not have a correspondent in old version
+[error]  * abstract method now()scala.util.continuations.ControlContext in trait resource.ManagedResource does not have a correspondent in old version
 [error]  * method rollbackTransactionResource()resource.Resource in trait resource.MediumPriorityResourceImplicits does not have a correspondent in new version
 [error] {file:/home/jsuereth/project/personal/scala-arm/}scala-arm/*:mima-report-binary-issues: Binary compatibility check failed!
 [error] Total time: 15 s, completed May 18, 2012 11:32:29 AM

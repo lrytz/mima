@@ -62,6 +62,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final var _signature: Signature         = Signature.none
   final var _aliases: List[String]        = Nil
   final var _scopedPrivate: Boolean       = false
+  final var _isScala: Boolean             = false
   final var _sealed: Boolean              = false
   final var _annotations: List[AnnotInfo] = Nil
   final var _moduleClass: ClassInfo       = NoClass
@@ -83,6 +84,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   // the private[foo] mark is only in the pickle, in one of the two classfiles of this class or of an enclosing object
   final def isScopedPrivate: Boolean     = { loadOuterChainModules(); afterLoading(_scopedPrivate) }
   final def isSealed: Boolean            = afterLoading(_sealed)
+  final def isScala: Boolean             = afterLoading(_isScala)
   final def annotations: List[AnnotInfo] = afterLoading(_annotations)
   final def moduleClass: ClassInfo       = { owner.setModules; if (_moduleClass == NoClass || _moduleClass == null) this else _moduleClass }
   final def module: ClassInfo            = { owner.setModules; if (_module == NoClass || _module == null) this else _module }
@@ -92,7 +94,8 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def isClass: Boolean          = !isInterface                       // class or object
   final def scopedPrivateSuff: String = if (isScopedPrivate) "[..]" else ""
   final def accessModifier: String    = if (isProtected) s"protected$scopedPrivateSuff" else if (isPrivate) s"private$scopedPrivateSuff" else ""
-  final def declarationPrefix: String = if (isModuleClass) "object" else if (isInterface) "interface" else "class"
+  final def declarationPrefix: String =
+    if (isModuleClass) "object" else if (!isInterface) "class" else if (isScala) "trait" else "interface"
   final lazy val fullName: String     = if (owner.isRoot) bytecodeName else s"${owner.fullName}.$bytecodeName"
   final def formattedFullName: String = formatClassName(if (isModuleClass) fullName.init else fullName)
   final def description: String       = s"$declarationPrefix $formattedFullName"

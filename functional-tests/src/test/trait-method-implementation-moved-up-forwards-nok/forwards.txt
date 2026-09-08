@@ -1,2 +1,2 @@
-method m()Int in interface foo.I does not have a correspondent in other version
-synthetic static method $init$(foo.I)Unit in interface foo.I does not have a correspondent in other version
+method m()Int in trait foo.I does not have a correspondent in other version
+synthetic static method $init$(foo.I)Unit in trait foo.I does not have a correspondent in other version
