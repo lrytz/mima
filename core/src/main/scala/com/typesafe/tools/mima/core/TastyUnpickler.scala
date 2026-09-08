@@ -161,7 +161,13 @@ object TastyUnpickler {
     def readTypeRef()      = TypeRef(name = readName(), qual = readType())          // NameRef qual_Type               -- A reference `qual.name` to a non-local member
     def readTermRef()      = TermRef(name = readName(), qual = readType())          // possiblySigned_NameRef qual_Type -- A reference `qual.name` to a non-local term, e.g. the object a class sits in
     def readAnnot()        = { readEnd(); Annot(readType(), skipTree(readByte())) } // tycon_Type fullAnnotation_Tree  -- An annotation, given (class) type of constructor, and full application tree
-    def readSharedType()   = unpickleTree(forkAt(readAddr()), names) match {
+    // {TYPE,TERM}REFsymbol sym_ASTRef qual_Type -- a reference to a symbol of this unit. The
+    // name is not in the payload, it sits at the definition the ASTRef points to.
+    def nameAt(addr: Addr)  = { val d = forkAt(addr); d.readByte(); d.readEnd(); names(d.readNat()) }
+    def readTypeRefSymbol() = TypeRef(name = nameAt(readAddr()), qual = readType())
+    def readTermRefSymbol() = TermRef(name = nameAt(readAddr()), qual = readType())
+
+    def readSharedType() = unpickleTree(forkAt(readAddr()), names) match {
       case tpe: Type => tpe
       // this reader skips some trees, and an alias can share one of those
       case _ => UnknownType(SHAREDtype)
@@ -188,7 +194,11 @@ object TastyUnpickler {
       case TERMREF    => readTermRef()
       case SELECT     => readTermRef() // SELECT carries the same name and qualifier
       case SHAREDtype => readSharedType()
-      case tag        => skipTree(tag); UnknownType(tag)
+
+      case TYPEREFsymbol => readTypeRefSymbol()
+      case TERMREFsymbol => readTermRefSymbol()
+      case THIS          => readType() // THIS clsRef_Type -- the class it names
+      case tag           => skipTree(tag); UnknownType(tag)
     }
 
     // APPLIEDtype/APPLIEDtpt Length tycon arg* -- tycon[args]
@@ -348,7 +358,8 @@ object TastyUnpickler {
           }
         case AstCat3AST    => readTree()
         case AstCat4NatAST => tag match {
-            case TYPEREFsymbol => skipTree(tag) match { case UnknownTree(tag) => UnknownType(tag) }
+            case TYPEREFsymbol => readTypeRefSymbol()
+            case TERMREFsymbol => readTermRefSymbol()
             case TYPEREF       => readTypeRef()
             case _             => skipTree(tag)
           }
