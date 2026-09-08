@@ -33,8 +33,12 @@ class Signature(private val signature: String) {
    *  A client's casts come from the arguments a class passes to a parent it already had,
    *  so a parent only one version names is absent here rather than counted as a change.
    */
-  private[mima] def parentTypeArgs: Map[String, String] = {
-    val sig  = canonicalized
+  private[mima] def parentTypeArgs: Map[String, String] = parentTypeArgsOf(canonicalized)
+
+  /** As `parentTypeArgs`, keeping the type parameter names this signature declares. */
+  private[mima] def rawParentTypeArgs: Map[String, String] = parentTypeArgsOf(signature)
+
+  private def parentTypeArgsOf(sig: String): Map[String, String] = {
     val rest = if (sig.startsWith("<")) FormalTypeParameter.parseList(sig.drop(1))._2 else sig
 
     @tailrec def loop(in: String, acc: Map[String, String]): Map[String, String] = {
@@ -50,6 +54,35 @@ class Signature(private val signature: String) {
     }
 
     loop(rest, Map.empty)
+  }
+
+  /** The names of the type parameters this signature declares. */
+  private[mima] def formalTypeParameters: List[String] =
+    if (!signature.startsWith("<")) Nil
+    else FormalTypeParameter.parseList(signature.drop(1))._1.map(_.identifier)
+
+  /** This signature with each of `formals` replaced by the type argument at the same
+   *  position, i.e. a parent's type parameters replaced by what a subclass passes to it.
+   */
+  private[mima] def substitute(formals: List[String], args: List[String]): Signature = {
+    // a wildcard argument has no form that can stand in for a type variable
+    val subst = formals.zip(args).collect { case (formal, arg) if "LT[".contains(arg.charAt(0)) => formal -> arg }.toMap
+    if (subst.isEmpty) this
+    else {
+      val out = new StringBuilder
+      var i   = 0
+      while (i < signature.length) {
+        // only where a type signature can start, so that a class named `TT` in `Lfoo/TT;`
+        // does not look like a use of the variable `T`
+        val startsType = i == 0 || "(<>;[)".contains(signature.charAt(i - 1))
+        val semi       = if (signature.charAt(i) == 'T' && startsType) signature.indexOf(';', i) else -1
+        subst.get(if (semi == -1) "" else signature.substring(i + 1, semi)) match {
+          case Some(arg) => out ++= arg; i = semi + 1
+          case None      => out += signature.charAt(i); i += 1
+        }
+      }
+      Signature(out.result())
+    }
   }
 
   def matches(newer: Signature, isConstructor: Boolean): Boolean = {
@@ -95,6 +128,35 @@ object Signature {
       i += 1
     }
     if (end < 0) in.length else end
+  }
+
+  /** The type arguments of a `<...>`, e.g. `<Ljava/lang/String;TA;>` yields the two of them. */
+  private[mima] def splitTypeArgs(in: String): List[String] = {
+    if (!in.startsWith("<") || !in.endsWith(">")) Nil
+    else {
+      val body = in.substring(1, in.length - 1)
+      val args = List.newBuilder[String]
+      var i    = 0
+      while (i < body.length) {
+        val end = endOfTypeArg(body, i)
+        if (end <= i) i = body.length // input the grammar above does not cover yields a partial parse
+        else { args += body.substring(i, end); i = end }
+      }
+      args.result()
+    }
+  }
+
+  /** Where the type argument starting at `from` ends, past its terminating ';'. */
+  @tailrec private def endOfTypeArg(in: String, from: Int): Int = {
+    val i = if (from < in.length && "+-".contains(in.charAt(from))) from + 1 else from
+    if (i >= in.length) -1
+    else in.charAt(i) match {
+      case '*' => i + 1
+      case '[' => endOfTypeArg(in, i + 1)
+      case 'T' => in.indexOf(';', i) match { case -1 => -1; case semi => semi + 1 }
+      case 'L' => i + endOfClassTypeSig(in.substring(i))
+      case _   => i + 1 // a primitive, as the element type of an array
+    }
   }
 
   def apply(signature: String): Signature = new Signature(signature)

@@ -38,15 +38,26 @@ private[analyze] object MethodChecker {
 
   private def checkExisting1Impl(oldmeth: MethodInfo, newclazz: ClassInfo, methsLookup: ClassInfo => Iterator[MethodInfo]): Option[Problem] = {
     val newmeths = methsLookup(newclazz).filter(oldmeth.paramsCount == _.paramsCount).toList
-    newmeths.find(newmeth => hasMatchingDescriptorAndSignature(oldmeth, newmeth)) match {
+    newmeths.find(newmeth => hasMatchingDescriptorAndSignature(oldmeth, newmeth, newclazz)) match {
       case Some(newmeth) => checkExisting1v1(oldmeth, newmeth)
       case None          => Some(missingOrIncompatible(oldmeth, newmeths, methsLookup))
     }
   }
 
-  private def hasMatchingDescriptorAndSignature(oldmeth: MethodInfo, newmeth: MethodInfo): Boolean =
+  private def hasMatchingDescriptorAndSignature(oldmeth: MethodInfo, newmeth: MethodInfo, newclazz: ClassInfo): Boolean =
     oldmeth.descriptor == newmeth.descriptor &&
-      oldmeth.signature.matches(newmeth.signature, newmeth.bytecodeName == MemberInfo.ConstructorName)
+      oldmeth.signature.matches(signatureIn(newmeth, newclazz), newmeth.bytecodeName == MemberInfo.ConstructorName)
+
+  /** The signature of `meth` as `clazz` sees it: a method `clazz` inherits from a generic parent
+   *  still names that parent's type parameters, which `clazz` has already given arguments.
+   */
+  private def signatureIn(meth: MethodInfo, clazz: ClassInfo): Signature = {
+    if (meth.owner == clazz) meth.signature
+    else clazz.signature.rawParentTypeArgs.collectFirst {
+      case (parent, args) if parent.replace('/', '.') == meth.owner.fullName =>
+        meth.signature.substitute(meth.owner.signature.formalTypeParameters, Signature.splitTypeArgs(args))
+    }.getOrElse(meth.signature)
+  }
 
   private def checkExisting1v1(oldmeth: MethodInfo, newmeth: MethodInfo) = {
     if (newmeth.isLessVisibleThan(oldmeth))

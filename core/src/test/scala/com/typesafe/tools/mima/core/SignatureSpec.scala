@@ -95,4 +95,22 @@ final class SignatureSpec extends munit.FunSuite {
     assertEquals(types(1), FormalTypeParameter("U", "Lscala/collection/immutable/List<TT;>"))
     assertEquals(obtRest, rest)
   }
+
+  test("splitTypeArgs splits each form a type argument can take") {
+    assertEquals(Signature.splitTypeArgs("<Ljava/lang/String;>"), List("Ljava/lang/String;"))
+    assertEquals(Signature.splitTypeArgs("<Ljava/util/List<TA;>;TB;>"), List("Ljava/util/List<TA;>;", "TB;"))
+    assertEquals(Signature.splitTypeArgs("<*+Ljava/lang/Number;-TA;>"), List("*", "+Ljava/lang/Number;", "-TA;"))
+    assertEquals(Signature.splitTypeArgs("<[I[Ljava/lang/String;>"), List("[I", "[Ljava/lang/String;"))
+    assertEquals(Signature.splitTypeArgs("Ljava/lang/String;"), Nil)
+  }
+
+  test("substitute replaces a parent's type parameters, and only those") {
+    val m = Signature("()Ljava/util/List<TT;>;")
+    assertEquals(m.substitute(List("T"), List("Ljava/lang/String;")).toString, "()Ljava/util/List<Ljava/lang/String;>;")
+    // a class whose name starts with the parameter's name is not a use of it
+    val named = Signature("()Lfoo/TT;")
+    assertEquals(named.substitute(List("T"), List("Ljava/lang/String;")).toString, "()Lfoo/TT;")
+    // a wildcard cannot stand in for a type variable
+    assertEquals(m.substitute(List("T"), List("*")).toString, m.toString)
+  }
 }
