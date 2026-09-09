@@ -262,6 +262,20 @@ mimaBinaryIssueFilters += { (p: Problem) => p.isExternallyAccessible }
 This drops the escaping classes too, so it can hide a real break: in the example
 above it would silence the report about `C.bar`.
 
+### Sealing
+
+MiMa reports a change that would break a client implementing one of your types (a new
+abstract method, a newly inherited one) only while a client can still write that
+implementation. Once a type is sealed and every one of its subtypes is closed
+(`final`, `sealed`, or no longer nameable from outside), nobody new can, so those
+checks stop.
+
+Clients that implemented it while it was open still exist, though, so the version
+that closes the hierarchy is reported, as `HierarchyBecomesClosedProblem`: it is the
+last one at which MiMa can tell you that an abstract method you add would break them.
+Sealing a trait closes a hierarchy; so does making its last open subclass `final` or
+`private[foo]`.
+
 ### Annotation-based exclusions
 
 The `mimaExcludeAnnotations` setting can be used to tell MiMa to

@@ -16,7 +16,11 @@ private[analyze] object MethodChecker {
   private def checkNew(oldclazz: ClassInfo, newclazz: ClassInfo, excludeAnnots: List[AnnotInfo]): List[Problem] = {
     // these problems break a client that implements oldclazz, and nobody outside can
     if (oldclazz.isClosedHierarchy) return Nil
-    checkDeferredMethodsProblems(oldclazz, newclazz, excludeAnnots) :::
+    // a client that implemented oldclazz while it was open is still out there, and from here on
+    // these checks no longer run: the abstract method a later version adds would go unreported
+    val closing = if (newclazz.isClosedHierarchy) List(HierarchyBecomesClosedProblem(oldclazz)) else Nil
+    closing :::
+      checkDeferredMethodsProblems(oldclazz, newclazz, excludeAnnots) :::
       checkInheritedNewAbstractMethodProblems(oldclazz, newclazz, excludeAnnots)
   }
 

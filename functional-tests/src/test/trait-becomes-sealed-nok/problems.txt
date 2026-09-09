@@ -1,0 +1,1 @@
+trait foo.T was extensible; in new version it is sealed and all its subtypes are closed, so an abstract method added to it later will no longer be reported, though it would break clients implementing it today
