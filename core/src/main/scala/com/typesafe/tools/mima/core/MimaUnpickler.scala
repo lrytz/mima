@@ -90,7 +90,8 @@ object MimaUnpickler {
       }
       if (tag == CLASSsym && buf.readIndex != end) buf.readNat() // thistype_Ref
       buf.assertEnd(end)
-      val isScopedPrivate = privateWithin != -1
+      // privateWithin is set for protected[p] too, and a subclass anywhere can still reach that
+      val isScopedPrivate = privateWithin != -1 && (flags & Flags.PROTECTED) == 0L
       SymbolInfo(tag, name, owner, flags, isScopedPrivate, info)
     }
 
@@ -230,16 +231,20 @@ object MimaUnpickler {
       val cls = classes(clsSym)
       if (cls != NoClass) {
         if (clsSym.isSealed) cls._sealed = true
-        if (clsSym.isScopedPrivate) {
-          cls._scopedPrivate = true
+        if (clsSym.isScopedPrivate || clsSym.isPrivate) {
+          if (clsSym.isScopedPrivate) cls._scopedPrivate = true else cls._private = true
           val companion = cls.companionClass
-          if (clsSym.isModuleOrModuleClass && companion != NoClass && !pickledClasses(companion))
-            companion._scopedPrivate = true
+          if (clsSym.isModuleOrModuleClass && companion != NoClass && !pickledClasses(companion)) {
+            companion._scopedPrivate = cls._scopedPrivate
+            companion._private = cls._private
+          }
           // the accessor of a nested object is only as accessible as the object; the pickle
           // has no method symbol for it, so it would otherwise let the object escape
           if (clsSym.isModuleOrModuleClass)
-            for (m <- cls.outer.methods.value if m.descriptor == s"()L${cls.fullName};")
-              m._scopedPrivate = true
+            for (m <- cls.outer.methods.value if m.descriptor == s"()L${cls.fullName};") {
+              m._scopedPrivate = cls._scopedPrivate
+              m._private = cls._private
+            }
         }
       }
       doMethods(cls, methSyms.filter(_.owner == clsSym).toList)
@@ -374,6 +379,7 @@ object MimaUnpickler {
 
   object Flags {
     final val PRIVATE    = 1L << 2
+    final val PROTECTED  = 1L << 3
     final val SEALED     = 1L << 4
     final val MODULE_PKL = 1L << 10
     final val PARAM      = 1L << 13

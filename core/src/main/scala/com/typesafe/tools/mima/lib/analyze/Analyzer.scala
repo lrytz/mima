@@ -20,8 +20,17 @@ object Analyzer {
         }
       }
       problem <- newpkg.classes.get(oldclazz.bytecodeName) match {
-        case Some(newclazz) => analyze(oldclazz, newclazz, log, excludeAnnots)
-        case None           => List(MissingClassProblem(oldclazz))
+        case Some(newclazz) =>
+          // accessibleClasses is the set mima iterates: a class dropping out of it never gets
+          // looked at again, so this is the last version that can report anything about it. One
+          // that keeps escaping is still checked, so nothing to report; one the bytecode itself
+          // makes inaccessible is TemplateChecker's InaccessibleClassProblem. The ref is oldclazz,
+          // the only one a filter on Problem.isExternallyAccessible keeps.
+          val noLongerChecked =
+            if (newpkg.accessibleClasses(newclazz) || newclazz.isBytecodeLessVisibleThan(oldclazz)) Nil
+            else List(ClassBecomesUnreachableProblem(oldclazz, newclazz))
+          noLongerChecked ::: analyze(oldclazz, newclazz, log, excludeAnnots)
+        case None => List(MissingClassProblem(oldclazz))
       }
     } yield {
       log.debug(s"problem found: ${problem.description("new")}")

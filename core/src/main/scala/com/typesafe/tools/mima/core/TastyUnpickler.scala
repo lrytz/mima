@@ -77,10 +77,12 @@ object TastyUnpickler {
 
     override def forEachClass(clsDef: ClsDef, cls: ClassInfo): Unit = {
       if (clsDef.flags.isSealed) cls._sealed = true
-      if (clsDef.privateWithin.isDefined) {
-        cls._scopedPrivate = true
-        val companion = cls.companionClass
-        if (cls.isModuleClass && companion != NoClass && !pickledClasses(companion)) companion._scopedPrivate = true
+      if (clsDef.privateWithin.isDefined) cls._scopedPrivate = true
+      else if (clsDef.flags.isPrivate) cls._private = true
+      val companion = cls.companionClass
+      if ((cls._scopedPrivate || cls._private) && cls.isModuleClass && companion != NoClass && !pickledClasses(companion)) {
+        companion._scopedPrivate = cls._scopedPrivate
+        companion._private = cls._private
       }
 
       cls._annotations ++= clsDef.annots.map(annot => AnnotInfo(annot.tycon.toString))
@@ -327,13 +329,14 @@ object TastyUnpickler {
         def readMods(end: Addr): (Option[Type], Flags, List[Annot]) = {
           //   PRIVATEqualified qualifier_Type --   private[qualifier]
           // PROTECTEDqualified qualifier_Type -- protected[qualifier]
+          // a subclass anywhere can reach protected[p], so only private[p] is a private scope
           var privateWithin = Option.empty[Type]
           var flags: Flags  = 0
           val annots        = new ListBuffer[Annot]
           doUntil(end)(readByte() match {
             case ANNOTATION                => annots += readAnnot()
             case PRIVATEqualified          => privateWithin = Some(readType())
-            case PROTECTEDqualified        => privateWithin = Some(readType())
+            case PROTECTEDqualified        => readType()
             case PRIVATE                   => flags |= Flags.PRIVATE
             case SEALED                    => flags |= Flags.SEALED
             case tag if isModifierTag(tag) => skipTree(tag)

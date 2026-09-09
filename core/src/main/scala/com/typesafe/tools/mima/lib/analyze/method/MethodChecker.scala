@@ -49,7 +49,9 @@ private[analyze] object MethodChecker {
       oldmeth.signature.matches(newmeth.signature, newmeth.bytecodeName == MemberInfo.ConstructorName)
 
   private def checkExisting1v1(oldmeth: MethodInfo, newmeth: MethodInfo) = {
-    if (newmeth.isBytecodeLessVisibleThan(oldmeth))
+    // isBytecodeLessVisibleThan reads bytecode flags, which stay public for private[p]; oldmeth
+    // is already known accessible, per the nonAccessible guard in checkExisting1
+    if (newmeth.isBytecodeLessVisibleThan(oldmeth) || newmeth.isScopedPrivate || newmeth.isPrivate)
       Some(InaccessibleMethodProblem(newmeth))
     else if (!oldmeth.isBytecodeFinal && newmeth.isBytecodeFinal && !oldmeth.owner.isBytecodeFinal)
       Some(FinalMethodProblem(newmeth))
@@ -65,7 +67,8 @@ private[analyze] object MethodChecker {
 
   private def checkStaticMixinForwarderMethod(oldmeth: MethodInfo, newclazz: ClassInfo) = {
     if (newclazz.hasMixinForwarder(oldmeth)) {
-      None // then it's ok, the method it is still there
+      // the forwarder is still there, but the method it forwards to can have gone private[p]
+      checkExisting1Impl(oldmeth, newclazz, _.lookupMethods(oldmeth))
     } else {
       if (newclazz.allTraits.exists(_.hasMixinForwarder(oldmeth))) {
         Some(NewMixinForwarderProblem(oldmeth))

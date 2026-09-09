@@ -62,6 +62,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final var _signature: Signature                  = Signature.none
   final var _aliases: List[String]                 = Nil
   final var _scopedPrivate: Boolean                = false
+  final var _private: Boolean                      = false
   final var _isScala: Boolean                      = false
   final var _sealed: Boolean                       = false
   final var _annotations: List[AnnotInfo]          = Nil
@@ -82,8 +83,10 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def flags: Int                   = afterLoading(_flags)
   final def signature: Signature         = afterLoading(_signature)
   final def aliases: List[String]        = afterLoading(_aliases)
-  // the private[foo] mark is only in the pickle, in one of the two classfiles of this class or of an enclosing object
+  // `private[p] class C`, and a nested `private class C`, are ACC_PUBLIC in bytecode
+  // so this information is read from the pickle, which can sit in a companion or enclosing classfile, so force them
   final def isScopedPrivate: Boolean     = { loadOuterChainModules(); afterLoading(_scopedPrivate) }
+  final def isPrivate: Boolean           = { loadOuterChainModules(); afterLoading(_private) }
   final def isSealed: Boolean            = afterLoading(_sealed)
   final def isScala: Boolean             = afterLoading(_isScala)
   final def annotations: List[AnnotInfo] = afterLoading(_annotations)
@@ -99,9 +102,9 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def isModuleClass: Boolean      = bytecodeName.endsWith("$")         // super scuffed
   final def isTraitOrInterface: Boolean = ClassfileParser.isInterface(flags) // java interface or trait
   final def isClass: Boolean            = !isTraitOrInterface                // class or object
-  final def scopedPrivateSuff: String   = if (isScopedPrivate) "[..]" else ""
-  final def accessModifier: String      =
-    if (isBytecodeProtected) s"protected$scopedPrivateSuff" else if (isBytecodePrivate) s"private$scopedPrivateSuff" else ""
+  // a class is only ever private in the pickle: the bytecode has no bit for it
+  final def accessModifier: String =
+    if (isScopedPrivate) "private[..]" else if (isPrivate) "private" else ""
   final def declarationPrefix: String =
     if (isModuleClass) "object" else if (!isTraitOrInterface) "class" else if (isScala) "trait" else "interface"
   final lazy val fullName: String     = if (owner.isRoot) bytecodeName else s"${owner.fullName}.$bytecodeName"
@@ -134,7 +137,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   private[mima] def isClosedHierarchy: Boolean = isSealed &&
     owner.root.subtypes.getOrElse(this, Set.empty).forall(_.isClosed)
 
-  private[mima] def isDirectlyAccessible: Boolean = isBytecodePublic && !isScopedPrivate
+  private[mima] def isDirectlyAccessible: Boolean = isBytecodePublic && !isScopedPrivate && !isPrivate
 
   private[mima] lazy val isExternallyAccessible: Boolean = isDirectlyAccessible && (outer == NoClass || outer.isExternallyAccessible)
 
