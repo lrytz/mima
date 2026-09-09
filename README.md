@@ -291,6 +291,10 @@ Example:
 mimaExcludeAnnotations += "scala.annotation.experimental"
 ```
 
+The annotation is read from the version being checked against, so the release that
+adds it is still checked in full; every release after it skips the annotated
+definition entirely, with no report.
+
 Caveat: `mimaExcludeAnnotations` is only implemented on Scala 3.
 
 ## Setting different mimaPreviousArtifacts
