@@ -55,6 +55,7 @@ object MimaSettings {
       ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.MemberInfo.scopedPrivate*"),
       ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.MemberInfo.absentFromPickle*"),
       ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.MemberInfo.signature_="),
+      ProblemFilters.exclude[DirectMissingMethodProblem]("com.typesafe.tools.mima.core.ClassInfo.scopedPrivateSuff"),
     ),
   )
 }

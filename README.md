@@ -201,7 +201,18 @@ ThisBuild / mimaReportSignatureProblems := true
 public, so a client can end up depending on one even though it cannot name it.
 
 MiMa ignores a qualified-private **member**, such as `private[foo] def`: nothing
-outside `foo` can call it.
+outside `foo` can call it. Narrowing a public member to `private[foo]` is reported,
+though, as `InaccessibleMethodProblem`: an already-compiled caller keeps linking, but
+the member has left the API, and MiMa stops watching it from here on, so a later
+removal would go unreported.
+
+`protected[foo]` is not qualified private: a subclass anywhere can still reach it, so
+MiMa treats it like plain `protected` and keeps checking it.
+
+A nested `private class` is emitted ACC_PUBLIC too, and MiMa reads the same rules from
+the pickle: nothing outside the enclosing class can name it, so it is ignored, and
+narrowing a public nested class to `private` is reported the same way as narrowing it
+to `private[foo]`.
 
 A qualified-private **class** is checked only when it escapes, e.g., a public method
 returns it, a public field holds it, or a public class extends it:
@@ -215,6 +226,16 @@ object Lib { def go: C = new C }
 `C` escapes through `Lib.go`, so a client can write `Lib.go.bar(1)`, and changing
 `bar` breaks it. MiMa reports changes to `C` and to its public members. A
 qualified-private class that never reaches a public signature is ignored.
+
+Losing that last escape route is reported, as `ClassBecomesUnreachableProblem`:
+dropping `Lib.go`, or narrowing a public class to `private[foo]` in the first place,
+takes the class out of MiMa's sight, so nothing that happens to it afterwards can be
+reported. Make the class public, or filter the problem if it really is internal from
+here on.
+
+A class that becomes `private[foo]` while it still escapes is not reported, because
+MiMa carries on checking it just the same. An escape is a leak to close, not a
+substitute for making the class public.
 
 Escape detection reads the bytecode and the pickle, so it sees a class that leaks
 only through a type alias or the bound of an abstract type member, neither of which
