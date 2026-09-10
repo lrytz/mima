@@ -141,16 +141,17 @@ object TastyUnpickler {
     }
 
     def doMethodOverloads(clazz: ClassInfo, name: Name, pickleMethods: Seq[TermMemberDef]) = {
-      val bytecodeMethods = clazz.methods.get(name.source).filter(!_.isBytecodeBridge).toList
-
-      if (pickleMethods.size == bytecodeMethods.size) {
-        if (pickleMethods.exists(t => t.privateWithin.isDefined || t.flags.isPrivate)) {
-          bytecodeMethods.zip(pickleMethods).foreach { case (bytecodeMeth, pickleMeth) =>
-
+      val byArity = clazz.methods.get(name.source).filter(!_.isBytecodeBridge).toList.groupBy(_.paramsCount)
+      pickleMethods.groupBy(_.paramsCount).foreach { case (arity, pickled) =>
+        val bytecodeMethods = byArity.getOrElse(arity, Nil)
+        // erasure can still map two of these onto one another, so only equal counts are safe,
+        // and a pair the bytecode keeps private is missing from its side altogether
+        val trustworthy = !clazz.privateInBytecode((name.source, arity)) && bytecodeMethods.size == pickled.size
+        if (trustworthy && pickled.exists(t => t.privateWithin.isDefined || t.flags.isPrivate))
+          bytecodeMethods.zip(pickled).foreach { case (bytecodeMeth, pickleMeth) =>
             bytecodeMeth._scopedPrivate = pickleMeth.privateWithin.isDefined
             bytecodeMeth._private = pickleMeth.flags.isPrivate
           }
-        }
       }
     }
   }.traverse(tree)
@@ -263,14 +264,19 @@ object TastyUnpickler {
         def readDefDef() = {
           // Length NameRef Param* returnType_Term rhs_Term? Modifier*  -- modifiers def name [typeparams] paramss : returnType (= rhs)?
           // Param = TypeParam | TermParam
-          val end  = readEnd()
-          val name = readName()
-          while (nextByte == TYPEPARAM || nextByte == PARAM || nextByte == EMPTYCLAUSE || nextByte == SPLITCLAUSE) skipTree(readByte()) // params
-          skipTree(readByte())                                                                                                          // returnType
+          val end         = readEnd()
+          val name        = readName()
+          var paramsCount = 0
+          while (nextByte == TYPEPARAM || nextByte == PARAM || nextByte == EMPTYCLAUSE || nextByte == SPLITCLAUSE) {
+            val tag = readByte()
+            if (tag == PARAM) paramsCount += 1 // erasure keeps one parameter per PARAM, clauses and all
+            skipTree(tag)
+          }
+          skipTree(readByte()) // returnType
 
           if (!nothingButMods(end)) skipTree(readByte()) // rhs
           val (privateWithin, flags, annots) = readMods(end)
-          DefDef(name, privateWithin, flags, annots)
+          DefDef(name, privateWithin, flags, annots, paramsCount)
         }
 
         def readTemplate(): Template = {
@@ -404,8 +410,11 @@ object TastyUnpickler {
   final case class TypeDef(name: Name, tpe: Type, privateWithin: Option[Type], annots: List[Annot]) extends Tree {
     def show = s"${showXs(annots, end = " ")}${showPrivateWithin(privateWithin)}type $name = ${tpe.show}"
   }
-  final case class ValDef(name: Name, privateWithin: Option[Type], flags: Flags, annots: List[Annot] = Nil) extends TermMemberDef
-  final case class DefDef(name: Name, privateWithin: Option[Type], flags: Flags, annots: List[Annot] = Nil) extends TermMemberDef
+  final case class ValDef(name: Name, privateWithin: Option[Type], flags: Flags, annots: List[Annot] = Nil) extends TermMemberDef {
+    def paramsCount = 0
+  }
+  final case class DefDef(name: Name, privateWithin: Option[Type], flags: Flags, annots: List[Annot] = Nil, paramsCount: Int = 0)
+      extends TermMemberDef
 
   sealed trait MemberStat extends Tree {
     protected def showContents: String
@@ -414,6 +423,7 @@ object TastyUnpickler {
   }
 
   sealed trait TermMemberDef extends MemberStat {
+    def paramsCount: Int
     override protected def showContents = s"def $name"
   }
 
@@ -458,7 +468,7 @@ object TastyUnpickler {
     def traverseClsDef(t: ClsDef)                          = { traverseName(t.name); traverseTemplate(t.template); traversePrivateWithin(t.privateWithin); t.annots.foreach(traverse) }
     def traverseTemplate(t: Template)                      = { t.classes.foreach(traverse); t.types.foreach(traverse); t.fields.foreach(traverse); t.meths.foreach(traverse) }
     def traverseValDef(valDef: ValDef)                     = { val ValDef(name, privateWithin, _, annots) = valDef; traverseName(name); traversePrivateWithin(privateWithin); annots.foreach(traverse) }
-    def traverseDefDef(defDef: DefDef)                     = { val DefDef(name, privateWithin, _, annots) = defDef; traverseName(name); traversePrivateWithin(privateWithin); annots.foreach(traverse) }
+    def traverseDefDef(defDef: DefDef)                     = { val DefDef(name, privateWithin, _, annots, _) = defDef; traverseName(name); traversePrivateWithin(privateWithin); annots.foreach(traverse) }
     def traverseTypeDef(t: TypeDef)                        = { traverseName(t.name); traverseType(t.tpe); traversePrivateWithin(t.privateWithin); t.annots.foreach(traverse) }
     def traversePrivateWithin(privateWithin: Option[Type]) = { privateWithin.foreach(traverseType) }
 

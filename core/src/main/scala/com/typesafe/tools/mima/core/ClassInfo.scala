@@ -51,22 +51,23 @@ private[core] final class ConcreteClassInfo(owner: PackageInfo, val file: AbsFil
 private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends InfoLike with Equals {
   import ClassInfo._
 
-  final var _innerClasses: Seq[String]    = Nil
-  final var _isLocalClass: Boolean        = false
-  final var _isTopLevel: Boolean          = true
-  final var _superClass: ClassInfo        = NoClass
-  final var _interfaces: List[ClassInfo]  = Nil
-  final var _fields: Members[FieldInfo]   = NoMembers
-  final var _methods: Members[MethodInfo] = NoMembers
-  final var _flags: Int                   = 0
-  final var _signature: Signature         = Signature.none
-  final var _aliases: List[String]        = Nil
-  final var _scopedPrivate: Boolean       = false
-  final var _isScala: Boolean             = false
-  final var _sealed: Boolean              = false
-  final var _annotations: List[AnnotInfo] = Nil
-  final var _moduleClass: ClassInfo       = NoClass
-  final var _companionClass: ClassInfo    = NoClass
+  final var _innerClasses: Seq[String]             = Nil
+  final var _isLocalClass: Boolean                 = false
+  final var _isTopLevel: Boolean                   = true
+  final var _superClass: ClassInfo                 = NoClass
+  final var _interfaces: List[ClassInfo]           = Nil
+  final var _fields: Members[FieldInfo]            = NoMembers
+  final var _methods: Members[MethodInfo]          = NoMembers
+  final var _flags: Int                            = 0
+  final var _signature: Signature                  = Signature.none
+  final var _aliases: List[String]                 = Nil
+  final var _scopedPrivate: Boolean                = false
+  final var _isScala: Boolean                      = false
+  final var _sealed: Boolean                       = false
+  final var _annotations: List[AnnotInfo]          = Nil
+  final var _privateInBytecode: Set[(String, Int)] = Set.empty
+  final var _moduleClass: ClassInfo                = NoClass
+  final var _companionClass: ClassInfo             = NoClass
 
   protected def afterLoading[A](x: => A): A
 
@@ -86,6 +87,9 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def isSealed: Boolean            = afterLoading(_sealed)
   final def isScala: Boolean             = afterLoading(_isScala)
   final def annotations: List[AnnotInfo] = afterLoading(_annotations)
+  /** Name and parameter count of each method the bytecode keeps private. mima drops those,
+   *  so for such a pair `methods` holds fewer than the class declares. */
+  final def privateInBytecode: Set[(String, Int)] = afterLoading(_privateInBytecode)
   /** For a plain C, the C$ holding the members of `object C`; NoClass if there is no such object. */
   // null while NoClass itself is under construction, since these initialise to it
   final def moduleClass: ClassInfo = { owner.linkModuleClasses; if (_moduleClass == null) NoClass else _moduleClass }

@@ -193,23 +193,30 @@ object MimaUnpickler {
       byName.foreach { case (name, pickleMethods) => doMethodOverloads(clazz, name, pickleMethods) }
     }
 
+    // METHODtpe lists a symbol per parameter, so the arity is there to be counted. Read it off
+    // the bytes rather than through `at`, which caches, and which infoRef does not always address
+    // a type in.
+    def paramsCountAt(ref: Int): Int = buf.atIndex(index(ref)) {
+      buf.readByte() match {
+        case METHODtpe | IMPLICITMETHODtpe => val end = readEnd(); buf.readNat(); until(end, () => buf.readNat()).size
+        case POLYtpe                       => readEnd(); paramsCountAt(buf.readNat())
+        case _                             => 0 // a val, or a method taking no parameters
+      }
+    }
+    def paramsCount(sym: SymbolInfo): Int = if (sym.infoRef < 0) 0 else paramsCountAt(sym.infoRef)
+
     def doMethodOverloads(clazz: ClassInfo, name: Name, pickleMethods: Seq[SymbolInfo]) = {
-      val bytecodeMethods = clazz.methods.get(name.value).filter(!_.isBytecodeBridge).toList
-      // #630 one way this happens with mixins:
-      //    trait Foo { def bar(x: Int): Int = x }
-      //    class Bar extends Foo { private[foo] def bar: String = "" }
-      // during pickling Bar only contains the package private bar()String
-      // but later in the backend the classfile gets a copy of bar(Int)Int
-      // so the "bar" method in the pickle doesn't know which bytecode method it's about
-      // the proper way to fix this involves unpickling the types in the pickle,
-      // then implementing the rules of erasure, so that you can then match the pickle
-      // types with the erased types.  Meanwhile we'll just ignore them, worst case users
-      // need to add a filter like they have for years.
-      if (pickleMethods.size == bytecodeMethods.size && pickleMethods.exists(m => m.isScopedPrivate || m.isPrivate)) {
-        bytecodeMethods.zip(pickleMethods).foreach { case (bytecodeMeth, pickleMeth) =>
-          bytecodeMeth._scopedPrivate = pickleMeth.isScopedPrivate
-          bytecodeMeth._private = pickleMeth.isPrivate
-        }
+      val byArity = clazz.methods.get(name.value).filter(!_.isBytecodeBridge).toList.groupBy(_.paramsCount)
+      pickleMethods.groupBy(paramsCount).foreach { case (arity, pickled) =>
+        val bytecodeMethods = byArity.getOrElse(arity, Nil)
+        // erasure can still map two of these onto one another, so only equal counts are safe,
+        // and a pair the bytecode keeps private is missing from its side altogether
+        val trustworthy = !clazz.privateInBytecode((name.value, arity)) && bytecodeMethods.size == pickled.size
+        if (trustworthy && pickled.exists(m => m.isScopedPrivate || m.isPrivate))
+          bytecodeMethods.zip(pickled).foreach { case (bytecodeMeth, pickleMeth) =>
+            bytecodeMeth._scopedPrivate = pickleMeth.isScopedPrivate
+            bytecodeMeth._private = pickleMeth.isPrivate
+          }
       }
     }
 
