@@ -89,13 +89,14 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def moduleClass: ClassInfo       = { owner.setModules; if (_moduleClass == NoClass || _moduleClass == null) this else _moduleClass }
   final def module: ClassInfo            = { owner.setModules; if (_module == NoClass || _module == null) this else _module }
 
-  final def isModuleClass: Boolean    = bytecodeName.endsWith("$")         // super scuffed
-  final def isInterface: Boolean      = ClassfileParser.isInterface(flags) // java interface or trait
-  final def isClass: Boolean          = !isInterface                       // class or object
-  final def scopedPrivateSuff: String = if (isScopedPrivate) "[..]" else ""
-  final def accessModifier: String    = if (isProtected) s"protected$scopedPrivateSuff" else if (isPrivate) s"private$scopedPrivateSuff" else ""
+  final def isModuleClass: Boolean      = bytecodeName.endsWith("$")         // super scuffed
+  final def isTraitOrInterface: Boolean = ClassfileParser.isInterface(flags) // java interface or trait
+  final def isClass: Boolean            = !isTraitOrInterface                // class or object
+  final def scopedPrivateSuff: String   = if (isScopedPrivate) "[..]" else ""
+  final def accessModifier: String      =
+    if (isBytecodeProtected) s"protected$scopedPrivateSuff" else if (isBytecodePrivate) s"private$scopedPrivateSuff" else ""
   final def declarationPrefix: String =
-    if (isModuleClass) "object" else if (!isInterface) "class" else if (isScala) "trait" else "interface"
+    if (isModuleClass) "object" else if (!isTraitOrInterface) "class" else if (isScala) "trait" else "interface"
   final lazy val fullName: String     = if (owner.isRoot) bytecodeName else s"${owner.fullName}.$bytecodeName"
   final def formattedFullName: String = formatClassName(if (isModuleClass) fullName.init else fullName)
   final def description: String       = s"$declarationPrefix $formattedFullName"
@@ -109,7 +110,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   def outerChain: Iterator[ClassInfo] = Iterator.iterate(this)(_.outer).takeWhile(_ != NoClass)
 
   /** Nothing outside this library can extend it. */
-  private[mima] def isClosed: Boolean = isFinal || isSealed || !isExternallyAccessible
+  private[mima] def isClosed: Boolean = isBytecodeFinal || isSealed || !isExternallyAccessible
 
   /** No client can extend this class, and none can extend its subtypes.
    *
@@ -119,7 +120,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   private[mima] def isClosedHierarchy: Boolean = isSealed &&
     owner.root.subtypes.getOrElse(this, Set.empty).forall(_.isClosed)
 
-  private[mima] def isDirectlyAccessible: Boolean = isPublic && !isScopedPrivate
+  private[mima] def isDirectlyAccessible: Boolean = isBytecodePublic && !isScopedPrivate
 
   private[mima] lazy val isExternallyAccessible: Boolean = isDirectlyAccessible && (outer == NoClass || outer.isExternallyAccessible)
 
@@ -153,12 +154,12 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def lookupClassMethods(method: MethodInfo): Iterator[MethodInfo] = {
     val name = method.bytecodeName
     if (name == MemberInfo.ConstructorName) methods.get(name) // constructors are not inherited
-    else if (method.isStatic) methods.get(name)               // static methods are not inherited
+    else if (method.isBytecodeStatic) methods.get(name)       // static methods are not inherited
     else thisAndSuperClasses.flatMap(_.methods.get(name))
   }
 
   private def lookupInterfaceMethods(method: MethodInfo): Iterator[MethodInfo] =
-    if (method.isStatic) Iterator.empty // static methods are not inherited
+    if (method.isBytecodeStatic) Iterator.empty // static methods are not inherited
     else allInterfaces.iterator.flatMap(_.methods.get(method.bytecodeName))
 
   final def lookupMethods(method: MethodInfo): Iterator[MethodInfo] =
@@ -167,13 +168,13 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   /** The default methods a class inherits: since Java 8 an invokevirtual resolves through the
    *  superinterfaces, so these stand in for a method the class does not declare itself. */
   final def lookupConcreteInterfaceMethods(method: MethodInfo): Iterator[MethodInfo] =
-    if (method.isStatic) Iterator.empty // static interface methods are not inherited
+    if (method.isBytecodeStatic) Iterator.empty // static interface methods are not inherited
     else allInterfaces.iterator.flatMap(_.concreteMethods).filter(_.bytecodeName == method.bytecodeName)
 
   final def lookupConcreteTraitMethods(method: MethodInfo): Iterator[MethodInfo] =
     allTraits.iterator.flatMap(_.concreteMethods).filter(_.bytecodeName == method.bytecodeName)
 
-  final lazy val concreteMethods: List[MethodInfo] = methods.value.filter(_.isConcrete)
+  final lazy val concreteMethods: List[MethodInfo] = methods.value.filter(!_.isBytecodeDeferred)
 
   /** The deferred methods of this type. */
   final lazy val deferredMethods: List[MethodInfo] = {
@@ -193,7 +194,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
       if (superClassTraits.contains(t)) Nil
       // traits with only abstract methods are presented as interfaces,
       // but nonetheless they should still be collected
-      else if (t.isInterface) parentsClosure(t) :+ t
+      else if (t.isTraitOrInterface) parentsClosure(t) :+ t
       else parentsClosure(t)
     }
 

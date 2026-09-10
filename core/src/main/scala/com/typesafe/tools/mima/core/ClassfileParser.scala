@@ -68,8 +68,8 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
 
   private def parseMemberAttributes(member: MemberInfo) = {
     parseAttributes {
-      case DeprecatedATTR => member.isDeprecated = true
-      case SignatureATTR  => member.signature = Signature(pool.getName(in.nextChar))
+      case DeprecatedATTR => member._isDeprecated = true
+      case SignatureATTR  => member._signature = Signature(pool.getName(in.nextChar))
       case _              =>
     }
   }
