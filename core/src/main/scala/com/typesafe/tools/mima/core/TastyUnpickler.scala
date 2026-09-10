@@ -129,7 +129,7 @@ object TastyUnpickler {
       val byName   = (tmpl.fields ::: tmpl.meths).iterator.toSeq.groupBy(_.name)
       val declared = byName.keysIterator.map(_.source).toSet
       for (m <- clazz.methods.value if !declared(m.bytecodeName))
-        m.absentFromPickle = true
+        m._absentFromPickle = true
       byName.foreach { case (name, pickleMethods) =>
         doMethodOverloads(clazz, name, pickleMethods)
         // the class of static forwarders carries no pickle, so mark it from the object's
@@ -139,14 +139,14 @@ object TastyUnpickler {
     }
 
     def doMethodOverloads(clazz: ClassInfo, name: Name, pickleMethods: Seq[TermMemberDef]) = {
-      val bytecodeMethods = clazz.methods.get(name.source).filter(!_.isBridge).toList
+      val bytecodeMethods = clazz.methods.get(name.source).filter(!_.isBytecodeBridge).toList
 
       if (pickleMethods.size == bytecodeMethods.size) {
         if (pickleMethods.exists(t => t.privateWithin.isDefined || t.flags.isPrivate)) {
           bytecodeMethods.zip(pickleMethods).foreach { case (bytecodeMeth, pickleMeth) =>
 
-            bytecodeMeth.scopedPrivate = pickleMeth.privateWithin.isDefined
-            bytecodeMeth.classPrivate = pickleMeth.flags.isPrivate
+            bytecodeMeth._scopedPrivate = pickleMeth.privateWithin.isDefined
+            bytecodeMeth._private = pickleMeth.flags.isPrivate
           }
         }
       }
