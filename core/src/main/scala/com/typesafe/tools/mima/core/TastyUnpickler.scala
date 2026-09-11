@@ -79,7 +79,8 @@ object TastyUnpickler {
       if (clsDef.flags.isSealed) cls._sealed = true
       if (clsDef.privateWithin.isDefined) {
         cls._scopedPrivate = true
-        if (cls.isModuleClass && !pickledClasses(cls.module)) cls.module._scopedPrivate = true
+        val companion = cls.companionClass
+        if (cls.isModuleClass && companion != NoClass && !pickledClasses(companion)) companion._scopedPrivate = true
       }
 
       cls._annotations ++= clsDef.annots.map(annot => AnnotInfo(annot.tycon.toString))
@@ -133,8 +134,9 @@ object TastyUnpickler {
       byName.foreach { case (name, pickleMethods) =>
         doMethodOverloads(clazz, name, pickleMethods)
         // the class of static forwarders carries no pickle, so mark it from the object's
-        if (clazz.isModuleClass && !pickledClasses(clazz.module))
-          doMethodOverloads(clazz.module, name, pickleMethods)
+        val forwarders = clazz.companionClass
+        if (clazz.isModuleClass && forwarders != NoClass && !pickledClasses(forwarders))
+          doMethodOverloads(forwarders, name, pickleMethods)
       }
     }
 

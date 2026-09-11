@@ -166,7 +166,8 @@ object MimaUnpickler {
         // Predef$$less$colon$less$<local child>
         NoClass
       } else {
-        val fallback = if (symbolInfo.isModuleOrModuleClass) clazz.moduleClass else clazz
+        val moduleClass = clazz.moduleClass
+        val fallback    = if (symbolInfo.isModuleOrModuleClass && moduleClass != NoClass) moduleClass else clazz
 
         def lookup(cls: ClassInfo) = {
           val clsName   = cls.bytecodeName
@@ -224,7 +225,9 @@ object MimaUnpickler {
         if (clsSym.isSealed) cls._sealed = true
         if (clsSym.isScopedPrivate) {
           cls._scopedPrivate = true
-          if (clsSym.isModuleOrModuleClass && !pickledClasses(cls.module)) cls.module._scopedPrivate = true
+          val companion = cls.companionClass
+          if (clsSym.isModuleOrModuleClass && companion != NoClass && !pickledClasses(companion))
+            companion._scopedPrivate = true
           // the accessor of a nested object is only as accessible as the object; the pickle
           // has no method symbol for it, so it would otherwise let the object escape
           if (clsSym.isModuleOrModuleClass)
