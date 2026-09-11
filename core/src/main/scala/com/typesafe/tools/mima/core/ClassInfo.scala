@@ -66,7 +66,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final var _sealed: Boolean              = false
   final var _annotations: List[AnnotInfo] = Nil
   final var _moduleClass: ClassInfo       = NoClass
-  final var _module: ClassInfo            = NoClass
+  final var _companionClass: ClassInfo    = NoClass
 
   protected def afterLoading[A](x: => A): A
 
@@ -86,8 +86,11 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def isSealed: Boolean            = afterLoading(_sealed)
   final def isScala: Boolean             = afterLoading(_isScala)
   final def annotations: List[AnnotInfo] = afterLoading(_annotations)
-  final def moduleClass: ClassInfo       = { owner.setModules; if (_moduleClass == NoClass || _moduleClass == null) this else _moduleClass }
-  final def module: ClassInfo            = { owner.setModules; if (_module == NoClass || _module == null) this else _module }
+  /** For a plain C, the C$ holding the members of `object C`; NoClass if there is no such object. */
+  // null while NoClass itself is under construction, since these initialise to it
+  final def moduleClass: ClassInfo = { owner.linkModuleClasses; if (_moduleClass == null) NoClass else _moduleClass }
+  /** For a C$, the plain C beside it, which holds the static forwarders; NoClass if there is none. */
+  final def companionClass: ClassInfo = { owner.linkModuleClasses; if (_companionClass == null) NoClass else _companionClass }
 
   final def isModuleClass: Boolean      = bytecodeName.endsWith("$")         // super scuffed
   final def isTraitOrInterface: Boolean = ClassfileParser.isInterface(flags) // java interface or trait
@@ -105,7 +108,14 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   private var _outerChainModulesLoaded: Boolean = this == NoClass
   @scala.annotation.tailrec
   private def loadOuterChainModules(): Unit =
-    if (!_outerChainModulesLoaded) { _outerChainModulesLoaded = true; module.forceLoad; moduleClass.forceLoad; outer.loadOuterChainModules() }
+    if (!_outerChainModulesLoaded) {
+      // the private[p] mark can come from the pickle of any of the three, whichever carries it
+      _outerChainModulesLoaded = true
+      forceLoad
+      companionClass.forceLoad
+      moduleClass.forceLoad
+      outer.loadOuterChainModules()
+    }
 
   def outerChain: Iterator[ClassInfo] = Iterator.iterate(this)(_.outer).takeWhile(_ != NoClass)
 

@@ -15,7 +15,7 @@ object Analyzer {
       if !excludeAnnots.exists { annot =>
         oldclazz.outerChain.exists { cls =>
           cls.annotations.contains(annot) ||
-          cls.module.annotations.contains(annot) ||
+          cls.companionClass.annotations.contains(annot) ||
           cls.moduleClass.annotations.contains(annot)
         }
       }
