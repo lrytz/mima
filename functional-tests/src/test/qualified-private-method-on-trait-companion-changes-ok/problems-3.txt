@@ -1,3 +1,0 @@
-# Scala 3 emits a static forwarder for a private[foo] method, and the forwarder is public
-# https://github.com/lampepfl/dotty/issues/10842
-static method make(Int)foo.Iface in trait foo.Iface does not have a correspondent in new version

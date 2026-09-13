@@ -1,1 +1,0 @@
-# no client outside foo can call make, so changing it breaks nobody

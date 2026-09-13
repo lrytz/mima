@@ -134,11 +134,16 @@ object TastyUnpickler {
       for (m <- clazz.methods.value if !declared(m.bytecodeName))
         m._absentFromPickle = true
       byName.foreach { case (name, pickleMethods) => doMethodOverloads(clazz, name, pickleMethods) }
-      // the class of static forwarders carries no pickle; each forwarder doubles a method of the
-      // object under the same name and descriptor, and takes that one's marks
+      // a forwarder carries no pickle of its own; it doubles a method the object declares,
+      // under the same name and descriptor, and takes that one's marks. A forwarder of an
+      // inherited method waits for MethodInfo.isScopedPrivateStaticForwarder, because the
+      // superclasses must not be evaluated while the pickle is being read.
       val forwarders = clazz.companionClass
-      if (clazz.isModuleClass && forwarders != NoClass && !pickledClasses(forwarders))
-        for (m <- clazz.methods.value; f <- forwarders.methods.get(m.bytecodeName) if f.descriptor == m.descriptor) {
+      if (clazz.isModuleClass && forwarders != NoClass)
+        for {
+          f <- forwarders.methods.value if f.isBytecodeStatic
+          m <- clazz.methods.get(f.bytecodeName).find(_.descriptor == f.descriptor)
+        } {
           f._scopedPrivate = m._scopedPrivate
           f._private = m._private
         }
