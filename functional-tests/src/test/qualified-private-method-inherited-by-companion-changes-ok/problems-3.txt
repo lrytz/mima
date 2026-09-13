@@ -1,0 +1,3 @@
+# The object inherits the method, so its own pickle says nothing about it, and the
+# forwarder on the companion class keeps the public mark the bytecode carries.
+static method make(Int)Int in class foo.Iface does not have a correspondent in new version
