@@ -127,32 +127,27 @@ object TastyUnpickler {
 
     def doMethods(tmpl: Template) = {
       val clazz    = currentClass
-      val byName   = (tmpl.fields ::: tmpl.meths).iterator.toSeq.groupBy(_.name)
+      val byName   = tmpl.terms.groupBy(_.name)
       val declared = byName.keysIterator.map(_.source).toSet
       for (m <- clazz.methods.value if !declared(m.bytecodeName))
         m._absentFromPickle = true
-      byName.foreach { case (name, pickleMethods) =>
-        doMethodOverloads(clazz, name, pickleMethods)
-        // the class of static forwarders carries no pickle, so mark it from the object's
-        val forwarders = clazz.companionClass
-        if (clazz.isModuleClass && forwarders != NoClass && !pickledClasses(forwarders))
-          doMethodOverloads(forwarders, name, pickleMethods)
-      }
-    }
-
-    def doMethodOverloads(clazz: ClassInfo, name: Name, pickleMethods: Seq[TermMemberDef]) = {
-      val bytecodeMethods = clazz.methods.get(name.source).filter(!_.isBytecodeBridge).toList
-
-      if (pickleMethods.size == bytecodeMethods.size) {
-        if (pickleMethods.exists(t => t.privateWithin.isDefined || t.flags.isPrivate)) {
-          bytecodeMethods.zip(pickleMethods).foreach { case (bytecodeMeth, pickleMeth) =>
-
-            bytecodeMeth._scopedPrivate = pickleMeth.privateWithin.isDefined
-            bytecodeMeth._private = pickleMeth.flags.isPrivate
-          }
+      byName.foreach { case (name, pickleMethods) => doMethodOverloads(clazz, name, pickleMethods) }
+      // the class of static forwarders carries no pickle; each forwarder doubles a method of the
+      // object under the same name and descriptor, and takes that one's marks
+      val forwarders = clazz.companionClass
+      if (clazz.isModuleClass && forwarders != NoClass && !pickledClasses(forwarders))
+        for (m <- clazz.methods.value; f <- forwarders.methods.get(m.bytecodeName) if f.descriptor == m.descriptor) {
+          f._scopedPrivate = m._scopedPrivate
+          f._private = m._private
         }
-      }
     }
+
+    def doMethodOverloads(clazz: ClassInfo, name: Name, pickleMethods: Seq[TermMemberDef]) =
+      if (pickleMethods.exists(t => t.privateWithin.isDefined || t.flags.isPrivate))
+        for ((bytecodeMeth, pickleMeth) <- clazz.pairOverloads(name.source, pickleMethods)(_.flags.isPrivate)) {
+          bytecodeMeth._scopedPrivate = pickleMeth.privateWithin.isDefined
+          bytecodeMeth._private = pickleMeth.flags.isPrivate
+        }
   }.traverse(tree)
 
   def unpickleTree(in: TastyReader, names: Names): Tree = {
@@ -290,17 +285,18 @@ object TastyUnpickler {
           val types   = new ListBuffer[TypeDef]
           val fields  = new ListBuffer[ValDef]
           val meths   = new ListBuffer[DefDef]
+          val terms   = new ListBuffer[TermMemberDef] // fields and meths together, in source order
           doUntil(end)(readByte() match {
             case TYPEDEF => readTypeDef() match {
                 case clsDef: ClsDef => classes += clsDef
                 case tree: TypeDef  => types += tree
                 case _              =>
               }
-            case VALDEF => fields += readValDef()
-            case DEFDEF => meths += readDefDef()
+            case VALDEF => val v = readValDef(); fields += v; terms += v
+            case DEFDEF => val d = readDefDef(); meths += d; terms += d
             case tag    => skipTree(tag)
           })
-          Template(classes.toList, types.toList, fields.toList, meths.toList)
+          Template(classes.toList, types.toList, fields.toList, meths.toList, terms.toList)
         }
 
         def readClassDef(name: Name, end: Addr) = {
@@ -398,7 +394,8 @@ object TastyUnpickler {
   final case class ClsDef(name: TypeName, template: Template, privateWithin: Option[Type], annots: List[Annot], flags: Flags) extends MemberStat {
     override protected def showContents = s"class $name$template"
   }
-  final case class Template(classes: List[ClsDef], types: List[TypeDef], fields: List[ValDef], meths: List[DefDef]) extends Tree {
+  final case class Template(classes: List[ClsDef], types: List[TypeDef], fields: List[ValDef], meths: List[DefDef], terms: List[TermMemberDef])
+      extends Tree {
     def show = s"${(classes ::: meths).map("\n  " + _).mkString}"
   }
   final case class TypeDef(name: Name, tpe: Type, privateWithin: Option[Type], annots: List[Annot]) extends Tree {

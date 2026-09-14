@@ -193,25 +193,12 @@ object MimaUnpickler {
       byName.foreach { case (name, pickleMethods) => doMethodOverloads(clazz, name, pickleMethods) }
     }
 
-    def doMethodOverloads(clazz: ClassInfo, name: Name, pickleMethods: Seq[SymbolInfo]) = {
-      val bytecodeMethods = clazz.methods.get(name.value).filter(!_.isBytecodeBridge).toList
-      // #630 one way this happens with mixins:
-      //    trait Foo { def bar(x: Int): Int = x }
-      //    class Bar extends Foo { private[foo] def bar: String = "" }
-      // during pickling Bar only contains the package private bar()String
-      // but later in the backend the classfile gets a copy of bar(Int)Int
-      // so the "bar" method in the pickle doesn't know which bytecode method it's about
-      // the proper way to fix this involves unpickling the types in the pickle,
-      // then implementing the rules of erasure, so that you can then match the pickle
-      // types with the erased types.  Meanwhile we'll just ignore them, worst case users
-      // need to add a filter like they have for years.
-      if (pickleMethods.size == bytecodeMethods.size && pickleMethods.exists(m => m.isScopedPrivate || m.isPrivate)) {
-        bytecodeMethods.zip(pickleMethods).foreach { case (bytecodeMeth, pickleMeth) =>
+    def doMethodOverloads(clazz: ClassInfo, name: Name, pickleMethods: Seq[SymbolInfo]) =
+      if (pickleMethods.exists(m => m.isScopedPrivate || m.isPrivate))
+        for ((bytecodeMeth, pickleMeth) <- clazz.pairOverloads(name.value, pickleMethods)(_.isPrivate)) {
           bytecodeMeth._scopedPrivate = pickleMeth.isScopedPrivate
           bytecodeMeth._private = pickleMeth.isPrivate
         }
-      }
-    }
 
     for (sym <- defnSyms) classes(sym) = symbolToClass(sym)
 

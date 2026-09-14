@@ -105,8 +105,9 @@ private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, fla
 
   def isPrivate: Boolean = _private
 
-  // ACC_BRIDGE is only a method's; the same bit means something else on a field
-  def isBytecodeBridge: Boolean = ClassfileParser.isBridge(flags)
+  // these two bits are only a method's; the same ones mean something else on a field
+  def isBytecodeBridge: Boolean  = ClassfileParser.isBridge(flags)
+  def isBytecodeVarargs: Boolean = ClassfileParser.isVarargs(flags)
 
   override def toString = s"def $bytecodeName: $descriptor"
 }

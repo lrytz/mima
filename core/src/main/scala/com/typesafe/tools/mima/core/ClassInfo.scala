@@ -51,22 +51,23 @@ private[core] final class ConcreteClassInfo(owner: PackageInfo, val file: AbsFil
 private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends InfoLike with Equals {
   import ClassInfo._
 
-  final var _innerClasses: Seq[String]    = Nil
-  final var _isLocalClass: Boolean        = false
-  final var _isTopLevel: Boolean          = true
-  final var _superClass: ClassInfo        = NoClass
-  final var _interfaces: List[ClassInfo]  = Nil
-  final var _fields: Members[FieldInfo]   = NoMembers
-  final var _methods: Members[MethodInfo] = NoMembers
-  final var _flags: Int                   = 0
-  final var _signature: Signature         = Signature.none
-  final var _aliases: List[String]        = Nil
-  final var _scopedPrivate: Boolean       = false
-  final var _isScala: Boolean             = false
-  final var _sealed: Boolean              = false
-  final var _annotations: List[AnnotInfo] = Nil
-  final var _moduleClass: ClassInfo       = NoClass
-  final var _companionClass: ClassInfo    = NoClass
+  final var _innerClasses: Seq[String]           = Nil
+  final var _isLocalClass: Boolean               = false
+  final var _isTopLevel: Boolean                 = true
+  final var _superClass: ClassInfo               = NoClass
+  final var _interfaces: List[ClassInfo]         = Nil
+  final var _fields: Members[FieldInfo]          = NoMembers
+  final var _methods: Members[MethodInfo]        = NoMembers
+  final var _flags: Int                          = 0
+  final var _signature: Signature                = Signature.none
+  final var _aliases: List[String]               = Nil
+  final var _scopedPrivate: Boolean              = false
+  final var _isScala: Boolean                    = false
+  final var _sealed: Boolean                     = false
+  final var _annotations: List[AnnotInfo]        = Nil
+  final var _privateInBytecode: Map[String, Int] = Map.empty
+  final var _moduleClass: ClassInfo              = NoClass
+  final var _companionClass: ClassInfo           = NoClass
 
   protected def afterLoading[A](x: => A): A
 
@@ -86,6 +87,30 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   final def isSealed: Boolean            = afterLoading(_sealed)
   final def isScala: Boolean             = afterLoading(_isScala)
   final def annotations: List[AnnotInfo] = afterLoading(_annotations)
+  /** How many methods of each name the bytecode keeps private; mima drops those from `methods`. */
+  final def privateInBytecode: Map[String, Int] = afterLoading(_privateInBytecode)
+
+  /** The bytecode methods of `name` paired with the pickle's overloads of it, so the pickle's
+   *  Scala visibility can be copied over. Both sides list a name's overloads in the same order --
+   *  nothing promises that, functional-tests pins it -- but not always the same ones: bridges and
+   *  the twin `@varargs` adds are bytecode only, and the bytecode keeps a method private only if
+   *  the source does, so when the source's private overloads number exactly as many as mima
+   *  dropped, those are the dropped ones. Any other mismatch cannot be told apart, and the
+   *  methods stay as the bytecode has them: public, and checked. */
+  final def pairOverloads[S](name: String, pickled: Seq[S])(isPrivate: S => Boolean): List[(MethodInfo, S)] = {
+    val (twins, kept) = methods.get(name).filter(!_.isBytecodeBridge).toList.partition(_.isBytecodeVarargs)
+    val dropped       = privateInBytecode.getOrElse(name, 0)
+    val declared      =
+      if (dropped == 0) Some(pickled)
+      else { val (priv, rest) = pickled.partition(isPrivate); if (priv.size == dropped) Some(rest) else None }
+    declared match {
+      case Some(ps) if ps.size == kept.size =>
+        // a twin doubles the one method it was generated for, Java array for Seq; with overloads
+        // that one cannot be told
+        kept.zip(ps) ::: (if (kept.size == 1) twins.map(_ -> ps.head) else Nil)
+      case _ => Nil
+    }
+  }
   /** For a plain C, the C$ holding the members of `object C`; NoClass if there is no such object. */
   // null while NoClass itself is under construction, since these initialise to it
   final def moduleClass: ClassInfo = { owner.linkModuleClasses; if (_moduleClass == null) NoClass else _moduleClass }

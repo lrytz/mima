@@ -1,0 +1,2 @@
+method f(Long)Int in class foo.C does not have a correspondent in new version
+method f(java.lang.String)Int in class foo.C does not have a correspondent in new version
