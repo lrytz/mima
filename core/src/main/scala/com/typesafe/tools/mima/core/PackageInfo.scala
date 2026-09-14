@@ -41,10 +41,13 @@ sealed class ConcretePackageInfo(val owner: PackageInfo, cp: ClassPath, pkg: Str
 final private[core] class DefinitionsPackageInfo(defs: Definitions)
     extends ConcretePackageInfo(NoPackageInfo, defs.classPath, ClassPath.RootPackage, defs)
 
-final private[mima] class DefinitionsTargetPackageInfo(root: PackageInfo)
+final private[mima] class DefinitionsTargetPackageInfo(root: PackageInfo, cp: ClassPath)
     extends SyntheticPackageInfo(root, "<root>") {
-  // Needed to fetch classes located in the root (empty package).
-  override lazy val classes = root.classes
+  // `root` covers the full classpath. Only classes from the compared artifact belong to the target.
+  override lazy val classes = cp.classes(ClassPath.RootPackage).map { f =>
+    val c = new ConcreteClassInfo(this, f)
+    c.bytecodeName -> c
+  }.toMap
 }
 
 /** Package information, including available classes and packages, and what is accessible. */
@@ -94,11 +97,18 @@ sealed abstract class PackageInfo {
    *  fixed point.
    */
   final lazy val escapedClasses: collection.Set[ClassInfo] = {
-    val escaped = mutable.Set.empty[ClassInfo]
-    val queue   = mutable.Queue.empty[ClassInfo]
+    // Signatures resolve against the full classpath. Map them back to the compared artifact
+    // before asking about accessibility, which loads the classfile and its Scala metadata.
+    val targetClasses = classesInTree.toList
+    val targetByName  = targetClasses.iterator.map(c => c.fullName -> c).toMap
+    val escaped       = mutable.Set.empty[ClassInfo]
+    val queue         = mutable.Queue.empty[ClassInfo]
 
-    def enqueue(clazz: ClassInfo): Unit =
-      if (clazz != NoClass && !clazz.isExternallyAccessible && escaped.add(clazz)) queue.enqueue(clazz)
+    def enqueue(clazz: ClassInfo): Unit = if (clazz != NoClass) {
+      targetByName.get(clazz.fullName).foreach { target =>
+        if (!target.isExternallyAccessible && escaped.add(target)) queue.enqueue(target)
+      }
+    }
     def enqueueAll(classes: Iterator[ClassInfo]): Unit =
       classes.foreach(enqueue)
 
@@ -116,7 +126,7 @@ sealed abstract class PackageInfo {
       clazz.innerClasses.foreach(clazz.owner.classes.get(_).foreach(enqueue))
     }
 
-    classesInTree.foreach { c => if (c.isExternallyAccessible) exposes(c) }
+    targetClasses.foreach { c => if (c.isExternallyAccessible) exposes(c) }
     while (queue.nonEmpty) exposes(queue.dequeue())
 
     escaped
