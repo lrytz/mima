@@ -55,7 +55,7 @@ private[analyze] object MethodChecker {
   private def checkExisting1v1(oldmeth: MethodInfo, newmeth: MethodInfo) = {
     // isBytecodeLessVisibleThan reads bytecode flags, which stay public for private[p]; oldmeth
     // is already known accessible, per the nonAccessible guard in checkExisting1
-    if (newmeth.isBytecodeLessVisibleThan(oldmeth) || newmeth.isScopedPrivate || newmeth.isPrivate)
+    if (newmeth.isBytecodeLessVisibleThan(oldmeth) || newmeth.isHiddenByScala)
       Some(InaccessibleMethodProblem(newmeth))
     else if (!oldmeth.isBytecodeFinal && newmeth.isBytecodeFinal && !oldmeth.owner.isBytecodeFinal)
       Some(FinalMethodProblem(newmeth))

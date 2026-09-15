@@ -1,0 +1,1 @@
+@publicInBinary is Scala 3.4+
