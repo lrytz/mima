@@ -1,0 +1,3 @@
+f stays ACC_PUBLIC in bytecode, so the app, which calls it directly from the inlined g,
+keeps linking. The report is precautionary: f has left the binary API, and from this
+version on mima stops checking it, so removing f later would break the app unreported.

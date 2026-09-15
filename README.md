@@ -209,6 +209,12 @@ removal would go unreported.
 `protected[foo]` is not qualified private: a subclass anywhere can still reach it, so
 MiMa treats it like plain `protected` and keeps checking it.
 
+A private member marked [`@publicInBinary`](https://docs.scala-lang.org/sips/binary-api.html)
+(Scala 3.4+) is the exception: an `inline` method outside the scope calls it directly
+once inlined, so MiMa checks it like a public member. Narrowing a public member to
+`@publicInBinary private[foo]` keeps it in the binary API and is not reported; dropping
+the annotation is.
+
 A nested `private class` is emitted ACC_PUBLIC too, and MiMa reads the same rules from
 the pickle: nothing outside the enclosing class can name it, so it is ignored, and
 narrowing a public nested class to `private` is reported the same way as narrowing it

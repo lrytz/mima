@@ -46,6 +46,10 @@ private[mima] final class FieldInfo(owner: ClassInfo, bytecodeName: String, flag
   override def toString      = s"field $bytecodeName: $descriptor"
 }
 
+private[mima] object MethodInfo {
+  final val PublicInBinary = AnnotInfo("scala.annotation.publicInBinary")
+}
+
 private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, flags: Int, descriptor: String)
     extends MemberInfo(owner, bytecodeName, flags, descriptor) {
   final var _annotations: List[AnnotInfo] = Nil
@@ -96,8 +100,12 @@ private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, fla
     _absentFromPickle && owner.allTraits.exists {
       _.methods.get(bytecodeName).exists(m => m.descriptor == descriptor && m.isScopedPrivate)
     }
+  /** Private in Scala, so no client can call it -- unless it is @publicInBinary (SIP-52): an
+   *  inline method outside the scope calls it directly once inlined. */
+  def isHiddenByScala: Boolean = (isScopedPrivate || isPrivate) && !annotations.contains(MethodInfo.PublicInBinary)
+
   def nonAccessible: Boolean = {
-    !isBytecodePublic || isScopedPrivate || isPrivate || isBytecodeSynthetic || isClassInitializer ||
+    !isBytecodePublic || isHiddenByScala || isBytecodeSynthetic || isClassInitializer ||
     isScopedPrivateMixinForwarder ||
     (hasSyntheticName && !(isExtensionMethod || isDefaultGetter || isTraitInit))
   }

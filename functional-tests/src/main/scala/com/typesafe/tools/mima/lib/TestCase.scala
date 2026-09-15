@@ -19,7 +19,10 @@ final class TestCase(val baseDir: Directory, val scalaCompiler: ScalaCompiler, v
   def name               = baseDir.name
   def scalaBinaryVersion = if (scalaCompiler.isScala3) "3" else scalaCompiler.version.take(4)
   def scalaJars          = scalaCompiler.jars
-  def skip: Boolean      = (baseDir / s"skip-${scalaBinaryVersion}.txt").exists
+  def skip: Boolean      = (baseDir / s"skip-${scalaBinaryVersion}.txt").exists || skipScala3Minor
+  // unlike the oracles, no fallback to earlier minors: skip-3.3.txt skips 3.3 alone
+  private def skipScala3Minor =
+    scalaCompiler.isScala3 && (baseDir / s"skip-3.${scalaCompiler.version.split('.')(1)}.txt").exists
 
   val srcV1  = (baseDir / "v1").toDirectory
   val srcV2  = (baseDir / "v2").toDirectory

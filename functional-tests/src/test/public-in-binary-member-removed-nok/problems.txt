@@ -1,0 +1,3 @@
+private[..] method f()Int in class foo.C does not have a correspondent in new version
+private[..] method v()Int in class foo.C does not have a correspondent in new version
+private[..] method this(Int)Unit in class foo.C's type is different in new version, where it is (Long)Unit instead of (Int)Unit

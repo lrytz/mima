@@ -1,0 +1,3 @@
+The change to Foo.foo is breaking, and the app does break on it. On Scala 3 mima stays
+silent because the harness passes mima.annotation.exclude as an excluded annotation, which
+is the point of the fixture.
