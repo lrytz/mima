@@ -158,7 +158,8 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   private[mima] def isClosedHierarchy: Boolean = isSealed &&
     owner.root.subtypes.getOrElse(this, Set.empty).forall(_.isClosed)
 
-  private[mima] def isDirectlyAccessible: Boolean = isBytecodePublic && !isScopedPrivate && !isPrivate
+  // a local or anonymous class is public in bytecode, but no client can name it
+  private[mima] def isDirectlyAccessible: Boolean = isBytecodePublic && !isScopedPrivate && !isPrivate && !isLocalClass
 
   private[mima] lazy val isExternallyAccessible: Boolean = isDirectlyAccessible && (outer == NoClass || outer.isExternallyAccessible)
 
