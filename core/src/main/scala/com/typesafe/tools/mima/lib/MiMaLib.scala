@@ -13,7 +13,7 @@ final class MiMaLib(cp: Seq[File], log: Logging = ConsoleLogging) {
   private def createPackage(dirOrJar: File): PackageInfo = {
     ClassPath.fromJarOrDir(dirOrJar).fold(createEmptyPackage(dirOrJar)) { cp =>
       val defs = new Definitions(ClassPath.of(List(cp, classpath)))
-      val pkg = new DefinitionsTargetPackageInfo(defs.root)
+      val pkg = new DefinitionsTargetPackageInfo(defs.root, cp)
       for (pkgName <- cp.packages(ClassPath.RootPackage)) {
         pkg.packages(pkgName) = new ConcretePackageInfo(pkg, cp, pkgName, defs)
       }
@@ -25,7 +25,7 @@ final class MiMaLib(cp: Seq[File], log: Logging = ConsoleLogging) {
   private def createEmptyPackage(missingDirOrJar: File): PackageInfo = {
     log.debug(s"not a directory or jar file: $missingDirOrJar.  This is normal for POM-only modules.  Proceeding with empty set of packages.")
     val defs = new Definitions(classpath)
-    new DefinitionsTargetPackageInfo(defs.root)
+    new DefinitionsTargetPackageInfo(defs.root, ClassPath.of(Nil))
   }
 
   private def traversePackages(oldpkg: PackageInfo, newpkg: PackageInfo, excludeAnnots: List[AnnotInfo]): List[Problem] = {
