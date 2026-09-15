@@ -123,7 +123,8 @@ sealed abstract class PackageInfo {
       enqueueAll(clazz.aliases.iterator.map(clazz.owner.definitions.fromAliasName))
       enqueue(clazz.superClass)
       enqueueAll(clazz.interfaces.iterator)
-      clazz.innerClasses.foreach(clazz.owner.classes.get(_).foreach(enqueue))
+      // a client reaches a nested class through its outer only if it can name the nested one
+      clazz.innerClasses.foreach(clazz.owner.classes.get(_).filter(_.isDirectlyAccessible).foreach(enqueue))
     }
 
     targetClasses.foreach { c => if (c.isExternallyAccessible) exposes(c) }

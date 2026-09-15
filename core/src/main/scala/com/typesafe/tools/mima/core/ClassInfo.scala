@@ -166,7 +166,7 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
   /** Whether mima checks this class: a client outside the scope can name it, or holds
    *  one all the same because a public method returns it. */
   private[mima] def isChecked: Boolean =
-    isExternallyAccessible || outerChain.exists(owner.root.escapedClasses)
+    isExternallyAccessible || owner.root.escapedClasses(this) || (isDirectlyAccessible && outer != NoClass && outer.isChecked)
 
   lazy val outer: ClassInfo = {
     val idx = bytecodeName.stripSuffix("$").lastIndexOf('$')
