@@ -11,6 +11,7 @@ private[core] object ClassfileConstants {
   final val JAVA_ACC_STATIC       = 0x0008
   final val JAVA_ACC_FINAL        = 0x0010
   final val JAVA_ACC_BRIDGE       = 0x0040
+  final val JAVA_ACC_VARARGS      = 0x0080
   final val JAVA_ACC_INTERFACE    = 0x0200
   final val JAVA_ACC_ABSTRACT     = 0x0400
   final val JAVA_ACC_SYNTHETIC    = 0x1000

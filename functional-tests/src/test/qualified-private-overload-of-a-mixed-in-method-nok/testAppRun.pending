@@ -1,0 +1,5 @@
+a false positive: nothing outside foo can call f(String), so removing it breaks
+no client. C has two bytecode methods named f, its own and a copy of T's, and the
+copy has no symbol of its own, so the pickle's single f cannot be told from the two
+and neither is marked private[foo]. Scala 3.3 declares the copy in TASTy, where the
+two sides do line up, so there mima gets it right -- see problems-3.3.txt.

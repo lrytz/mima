@@ -1,0 +1,4 @@
+a false positive: both constructors are private, only C.make reaches them, so
+changing one breaks no client. The bytecode keeps this(String) private, which mima
+drops, and widens this(Int) to public so the companion can call it, leaving two
+private symbols in the pickle against the one method mima kept.

@@ -15,13 +15,22 @@ object Analyzer {
       if !excludeAnnots.exists { annot =>
         oldclazz.outerChain.exists { cls =>
           cls.annotations.contains(annot) ||
-          cls.module.annotations.contains(annot) ||
+          cls.companionClass.annotations.contains(annot) ||
           cls.moduleClass.annotations.contains(annot)
         }
       }
       problem <- newpkg.classes.get(oldclazz.bytecodeName) match {
-        case Some(newclazz) => analyze(oldclazz, newclazz, log, excludeAnnots)
-        case None           => List(MissingClassProblem(oldclazz))
+        case Some(newclazz) =>
+          // Will mima still check the class next time? accessibleClasses is the set this loop
+          // draws from, so asking it of newclazz asks exactly that. If not, this is the last
+          // version that can report anything about the class, so say so -- unless the bytecode
+          // itself turned it inaccessible, which TemplateChecker already reports.
+          // The ref is oldclazz, the only one a filter on Problem.isExternallyAccessible keeps.
+          val noLongerChecked =
+            if (newpkg.accessibleClasses(newclazz) || newclazz.isBytecodeLessVisibleThan(oldclazz)) Nil
+            else List(ClassBecomesUnreachableProblem(oldclazz, newclazz))
+          noLongerChecked ::: analyze(oldclazz, newclazz, log, excludeAnnots)
+        case None => List(MissingClassProblem(oldclazz))
       }
     } yield {
       log.debug(s"problem found: ${problem.description("new")}")

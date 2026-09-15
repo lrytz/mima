@@ -90,7 +90,8 @@ object MimaUnpickler {
       }
       if (tag == CLASSsym && buf.readIndex != end) buf.readNat() // thistype_Ref
       buf.assertEnd(end)
-      val isScopedPrivate = privateWithin != -1
+      // privateWithin is set for protected[p] too, and a subclass anywhere can still reach that
+      val isScopedPrivate = privateWithin != -1 && (flags & Flags.PROTECTED) == 0L
       SymbolInfo(tag, name, owner, flags, isScopedPrivate, info)
     }
 
@@ -166,7 +167,8 @@ object MimaUnpickler {
         // Predef$$less$colon$less$<local child>
         NoClass
       } else {
-        val fallback = if (symbolInfo.isModuleOrModuleClass) clazz.moduleClass else clazz
+        val moduleClass = clazz.moduleClass
+        val fallback    = if (symbolInfo.isModuleOrModuleClass && moduleClass != NoClass) moduleClass else clazz
 
         def lookup(cls: ClassInfo) = {
           val clsName   = cls.bytecodeName
@@ -188,29 +190,16 @@ object MimaUnpickler {
     def doMethods(clazz: ClassInfo, methods: List[SymbolInfo]) = {
       val byName = methods.iterator.filter(!_.isParam).toSeq.groupBy(_.name)
       for (m <- clazz.methods.value if !byName.contains(TermName(m.bytecodeName)))
-        m.absentFromPickle = true
+        m._absentFromPickle = true
       byName.foreach { case (name, pickleMethods) => doMethodOverloads(clazz, name, pickleMethods) }
     }
 
-    def doMethodOverloads(clazz: ClassInfo, name: Name, pickleMethods: Seq[SymbolInfo]) = {
-      val bytecodeMethods = clazz.methods.get(name.value).filter(!_.isBridge).toList
-      // #630 one way this happens with mixins:
-      //    trait Foo { def bar(x: Int): Int = x }
-      //    class Bar extends Foo { private[foo] def bar: String = "" }
-      // during pickling Bar only contains the package private bar()String
-      // but later in the backend the classfile gets a copy of bar(Int)Int
-      // so the "bar" method in the pickle doesn't know which bytecode method it's about
-      // the proper way to fix this involves unpickling the types in the pickle,
-      // then implementing the rules of erasure, so that you can then match the pickle
-      // types with the erased types.  Meanwhile we'll just ignore them, worst case users
-      // need to add a filter like they have for years.
-      if (pickleMethods.size == bytecodeMethods.size && pickleMethods.exists(m => m.isScopedPrivate || m.isClassPrivate)) {
-        bytecodeMethods.zip(pickleMethods).foreach { case (bytecodeMeth, pickleMeth) =>
-          bytecodeMeth.scopedPrivate = pickleMeth.isScopedPrivate
-          bytecodeMeth.classPrivate = pickleMeth.isClassPrivate
+    def doMethodOverloads(clazz: ClassInfo, name: Name, pickleMethods: Seq[SymbolInfo]) =
+      if (pickleMethods.exists(m => m.isScopedPrivate || m.isPrivate))
+        for ((bytecodeMeth, pickleMeth) <- clazz.pairOverloads(name.value, pickleMethods)(_.isPrivate)) {
+          bytecodeMeth._scopedPrivate = pickleMeth.isScopedPrivate
+          bytecodeMeth._private = pickleMeth.isPrivate
         }
-      }
-    }
 
     for (sym <- defnSyms) classes(sym) = symbolToClass(sym)
 
@@ -222,14 +211,20 @@ object MimaUnpickler {
       val cls = classes(clsSym)
       if (cls != NoClass) {
         if (clsSym.isSealed) cls._sealed = true
-        if (clsSym.isScopedPrivate) {
-          cls._scopedPrivate = true
-          if (clsSym.isModuleOrModuleClass && !pickledClasses(cls.module)) cls.module._scopedPrivate = true
+        if (clsSym.isScopedPrivate || clsSym.isPrivate) {
+          if (clsSym.isScopedPrivate) cls._scopedPrivate = true else cls._private = true
+          val companion = cls.companionClass
+          if (clsSym.isModuleOrModuleClass && companion != NoClass && !pickledClasses(companion)) {
+            companion._scopedPrivate = cls._scopedPrivate
+            companion._private = cls._private
+          }
           // the accessor of a nested object is only as accessible as the object; the pickle
           // has no method symbol for it, so it would otherwise let the object escape
           if (clsSym.isModuleOrModuleClass)
-            for (m <- cls.outer.methods.value if m.descriptor == s"()L${cls.fullName};")
-              m.scopedPrivate = true
+            for (m <- cls.outer.methods.value if m.descriptor == s"()L${cls.fullName};") {
+              m._scopedPrivate = cls._scopedPrivate
+              m._private = cls._private
+            }
         }
       }
       doMethods(cls, methSyms.filter(_.owner == clsSym).toList)
@@ -249,7 +244,7 @@ object MimaUnpickler {
     }
 
     for {
-      sym <- syms if (sym.tag == ALIASsym || sym.tag == TYPEsym) && !sym.isScopedPrivate && !sym.isClassPrivate
+      sym <- syms if (sym.tag == ALIASsym || sym.tag == TYPEsym) && !sym.isScopedPrivate && !sym.isPrivate
       cls = classes.getOrElse(sym.owner, NoClass) if cls != NoClass
       name <- aliasedNames(at(sym.infoRef, readType))
     } cls._aliases ::= name
@@ -332,7 +327,7 @@ object MimaUnpickler {
     def hasFlag(flag: Long): Boolean = (flags & flag) != 0L
     def isModuleOrModuleClass        = hasFlag(Flags.MODULE_PKL)
     def isParam                      = hasFlag(Flags.PARAM)
-    def isClassPrivate               = hasFlag(Flags.PRIVATE)
+    def isPrivate                    = hasFlag(Flags.PRIVATE)
     def isSealed                     = hasFlag(Flags.SEALED)
   }
   val NoSymbol: SymbolInfo = SymbolInfo(NONEsym, nme.NoSymbol, null, 0, false, -1)
@@ -364,6 +359,7 @@ object MimaUnpickler {
 
   object Flags {
     final val PRIVATE    = 1L << 2
+    final val PROTECTED  = 1L << 3
     final val SEALED     = 1L << 4
     final val MODULE_PKL = 1L << 10
     final val PARAM      = 1L << 13

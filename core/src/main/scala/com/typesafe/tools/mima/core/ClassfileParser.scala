@@ -15,8 +15,10 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
 
     clazz._superClass = parseSuperClass(clazz, flags)
     clazz._interfaces = parseInterfaces()
-    clazz._fields = parseMembers[FieldInfo](clazz)
-    clazz._methods = parseMembers[MethodInfo](clazz)
+    clazz._fields = parseMembers[FieldInfo](clazz, _ => ())
+    clazz._methods = parseMembers[MethodInfo](
+      clazz,
+      n => clazz._privateInBytecode += n -> (clazz._privateInBytecode.getOrElse(n, 0) + 1))
     parseClassAttributes(clazz)
   }
 
@@ -31,11 +33,11 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
     List.fill(in.nextChar)(pool.getSuperClass(in.nextChar))
   }
 
-  private def parseMembers[A <: MemberInfo: MkMember](clazz: ClassInfo): Members[A] = {
+  private def parseMembers[A <: MemberInfo: MkMember](clazz: ClassInfo, notePrivate: String => Unit): Members[A] = {
     val members = for {
       _ <- 0.until(in.nextChar).iterator
       flags = in.nextChar
-      _ = if (isPrivate(flags)) { in.skip(4); parseAttributes(_ => ()) }
+      _ = if (isPrivate(flags)) { notePrivate(pool.getName(in.nextChar)); in.skip(2); parseAttributes(_ => ()) }
       if !isPrivate(flags)
     } yield parseMember[A](clazz, flags)
     new Members(members.toList)
@@ -68,8 +70,8 @@ final class ClassfileParser private (in: BufferReader, pool: ConstantPool) {
 
   private def parseMemberAttributes(member: MemberInfo) = {
     parseAttributes {
-      case DeprecatedATTR => member.isDeprecated = true
-      case SignatureATTR  => member.signature = Signature(pool.getName(in.nextChar))
+      case DeprecatedATTR => member._isDeprecated = true
+      case SignatureATTR  => member._signature = Signature(pool.getName(in.nextChar))
       case _              =>
     }
   }
@@ -182,6 +184,7 @@ object ClassfileParser {
   def isStatic(flags: Int)     = 0 != (flags & JAVA_ACC_STATIC)
   def isFinal(flags: Int)      = 0 != (flags & JAVA_ACC_FINAL)
   def isBridge(flags: Int)     = 0 != (flags & JAVA_ACC_BRIDGE)
+  def isVarargs(flags: Int)    = 0 != (flags & JAVA_ACC_VARARGS)
   def isInterface(flags: Int)  = 0 != (flags & JAVA_ACC_INTERFACE)
   def isDeferred(flags: Int)   = 0 != (flags & JAVA_ACC_ABSTRACT)
   def isSynthetic(flags: Int)  = 0 != (flags & JAVA_ACC_SYNTHETIC)
