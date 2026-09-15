@@ -29,7 +29,8 @@ object CollectProblemsTest {
       excludeAnnots: List[String] = Nil,
       direction: Direction = Backwards,
   ): Try[Unit] = {
-    val problems = new MiMaLib(cp).collectProblems(v1, v2, excludeAnnots).filter(problemFilters.foldAll)
+    val problems =
+      new MiMaLib(cp).collectProblems(v1, v2, excludeAnnots, direction == Forwards).filter(problemFilters.foldAll)
     val affectedVersion = direction match {
       case Backwards => "new"
       case Forwards  => "other"

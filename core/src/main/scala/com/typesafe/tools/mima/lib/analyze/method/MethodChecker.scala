@@ -53,9 +53,8 @@ private[analyze] object MethodChecker {
       oldmeth.signature.matches(newmeth.signature, newmeth.bytecodeName == MemberInfo.ConstructorName)
 
   private def checkExisting1v1(oldmeth: MethodInfo, newmeth: MethodInfo) = {
-    // isBytecodeLessVisibleThan reads bytecode flags, which stay public for private[p]; oldmeth
-    // is already known accessible, per the nonAccessible guard in checkExisting1
-    if (newmeth.isBytecodeLessVisibleThan(oldmeth) || newmeth.isHiddenByScala)
+    // oldmeth is known accessible, per the nonAccessible guard in checkExisting1
+    if (newmeth.isBytecodeLessVisibleThan(oldmeth))
       Some(InaccessibleMethodProblem(newmeth))
     else if (!oldmeth.isBytecodeFinal && newmeth.isBytecodeFinal && !oldmeth.owner.isBytecodeFinal)
       Some(FinalMethodProblem(newmeth))
@@ -65,6 +64,10 @@ private[analyze] object MethodChecker {
       Some(StaticVirtualMemberProblem(oldmeth))
     else if (!oldmeth.isBytecodeStatic && newmeth.isBytecodeStatic)
       Some(VirtualStaticMemberProblem(oldmeth))
+    // last, so that dropping it for a forward check cannot hide another problem about the method;
+    // the ref is oldmeth, the only one a filter on Problem.isExternallyAccessible keeps
+    else if (newmeth.isHiddenByScala)
+      Some(MethodBecomesUnreachableProblem(oldmeth, newmeth))
     else
       None
   }

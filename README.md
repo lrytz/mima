@@ -202,7 +202,7 @@ public, so a client can end up depending on one even though it cannot name it.
 
 MiMa ignores a qualified-private **member**, such as `private[foo] def`: nothing
 outside `foo` can call it. Narrowing a public member to `private[foo]` is reported,
-though, as `InaccessibleMethodProblem`: an already-compiled caller keeps linking, but
+though, as `MethodBecomesUnreachableProblem`: an already-compiled caller keeps linking, but
 the member has left the API, and MiMa stops watching it from here on, so a later
 removal would go unreported.
 

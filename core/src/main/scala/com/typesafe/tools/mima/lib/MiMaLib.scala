@@ -7,7 +7,17 @@ import com.typesafe.tools.mima.core._
 import com.typesafe.tools.mima.core.util.log.{ ConsoleLogging, Logging }
 import com.typesafe.tools.mima.lib.analyze.Analyzer
 
+object MiMaLib {
+  /** Problems that report what mima will no longer check, rather than a break in this pair. */
+  private def guardsLaterVersions(problem: Problem) = problem match {
+    case _: ClassBecomesUnreachableProblem | _: MethodBecomesUnreachableProblem | _: HierarchyBecomesClosedProblem => true
+    case _                                                                                                         => false
+  }
+}
+
 final class MiMaLib(cp: Seq[File], log: Logging = ConsoleLogging) {
+  import MiMaLib._
+
   private val classpath = ClassPath.of(cp.flatMap(ClassPath.fromJarOrDir(_)) :+ ClassPath.base)
 
   private def createPackage(dirOrJar: File): PackageInfo = {
@@ -37,12 +47,19 @@ final class MiMaLib(cp: Seq[File], log: Logging = ConsoleLogging) {
   }
 
   /** Return a list of problems for the two versions of the library. */
-  def collectProblems(oldJarOrDir: File, newJarOrDir: File, excludeAnnots: List[String]): List[Problem] = {
+  def collectProblems(oldJarOrDir: File, newJarOrDir: File, excludeAnnots: List[String]): List[Problem] =
+    collectProblems(oldJarOrDir, newJarOrDir, excludeAnnots, forwards = false)
+
+  /** `forwards` says that `newJarOrDir` is the earlier release, as when checking forward
+   *  compatibility. What mima will stop checking from the later version on is left out then:
+   *  the earlier version has nothing to say about it. */
+  def collectProblems(oldJarOrDir: File, newJarOrDir: File, excludeAnnots: List[String], forwards: Boolean): List[Problem] = {
     val oldPackage = createPackage(oldJarOrDir)
     val newPackage = createPackage(newJarOrDir)
     log.debug(s"[old version in: ${oldPackage.definitions}]")
     log.debug(s"[new version in: ${newPackage.definitions}]")
     log.debug(s"classpath: ${classpath.asClassPathString}")
-    traversePackages(oldPackage, newPackage, excludeAnnots.map(AnnotInfo(_)))
+    val problems = traversePackages(oldPackage, newPackage, excludeAnnots.map(AnnotInfo(_)))
+    if (forwards) problems.filterNot(guardsLaterVersions) else problems
   }
 }
