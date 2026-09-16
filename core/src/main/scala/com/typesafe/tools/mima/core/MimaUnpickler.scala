@@ -67,10 +67,15 @@ object MimaUnpickler {
       case ALIASsym       => readSymbol(tag)
       case CLASSsym       => readSymbol(tag) // CLASSsym len_Nat SymbolInfo [thistype_Ref]
       case MODULEsym      => readSymbol(tag)
-      case VALsym         => readSymbol(tag)
+      case VALsym         => readSymbol(tag) // VALsym len_Nat SymbolInfo [alias_Ref]
       case EXTref         => readExt(tag)
       case EXTMODCLASSref => readExt(tag)
       case tag            => sys.error(s"Unexpected tag ${tag2string(tag)}")
+    }
+
+    def isSymbolRef(num: Int): Boolean = {
+      val tag = buf.bytes(index(num)).toInt
+      firstSymTag <= tag && tag <= lastExtSymTag
     }
 
     def readSymbol(tag: Int): SymbolInfo = {
@@ -84,11 +89,13 @@ object MimaUnpickler {
       val owner = readSymRef()
       val flags = buf.readLongNat()
 
+      // A self type or an alias fills a slot too, so the entry's length doesn't say whether
+      // privateWithin is here. It is the only one of these refs that names a symbol.
       val (privateWithin, info) = buf.readNat() match {
-        case info if buf.readIndex == end => (-1, info)
-        case privateWithin                => (privateWithin, buf.readNat())
+        case ref if isSymbolRef(ref) => (ref, buf.readNat())
+        case info                    => (-1, info)
       }
-      if (tag == CLASSsym && buf.readIndex != end) buf.readNat() // thistype_Ref
+      if (buf.readIndex != end) buf.readNat() // CLASSsym's [thistype_Ref], VALsym's [alias_Ref]
       buf.assertEnd(end)
       // privateWithin is set for protected[p] too, and a subclass anywhere can still reach that
       val isScopedPrivate = privateWithin != -1 && (flags & Flags.PROTECTED) == 0L
