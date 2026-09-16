@@ -130,7 +130,8 @@ object SbtMima {
         for {
           (rawText, line) <- source.getLines().zipWithIndex
           if !rawText.startsWith("#")
-          text = rawText.trim
+          // the report prints filters comma-separated, ready to paste into a Seq or into a file
+          text = rawText.trim.stripSuffix(",")
           if text != ""
         } {
           text match {
