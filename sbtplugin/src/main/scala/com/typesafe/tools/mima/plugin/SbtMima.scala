@@ -23,7 +23,7 @@ object SbtMima {
     sanityCheckScalaVersion(scalaVersion)
     val mimaLib = new MiMaLib(Attributed.data(cp), new SbtLogger(logger))
     def checkBC = mimaLib.collectProblems(prev, curr, excludeAnnots)
-    def checkFC = mimaLib.collectProblems(curr, prev, excludeAnnots)
+    def checkFC = mimaLib.collectProblems(curr, prev, excludeAnnots, forwards = true)
     dir match {
       case "backward" | "backwards" => (checkBC, Nil)
       case "forward" | "forwards"   => (Nil, checkFC)

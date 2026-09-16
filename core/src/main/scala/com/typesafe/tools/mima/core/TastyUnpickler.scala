@@ -278,16 +278,21 @@ object TastyUnpickler {
           //             SPLITCLAUSE                                     -- splits two non-empty parameter clauses of the same kind
           // Self      = SELFDEF     selfName_NameRef selfType_Term      -- selfName : selfType
           assert(readByte() == TEMPLATE)
-          val end = readEnd()
-          while (nextByte == TYPEPARAM) skipTree(readByte())                                                   // vparams
-          while (nextByte == PARAM || nextByte == EMPTYCLAUSE || nextByte == SPLITCLAUSE) skipTree(readByte()) // tparams
-          while (nextByte != SELFDEF && nextByte != DEFDEF) skipTree(readByte())                               // parents
-          if (nextByte == SELFDEF) skipTree(readByte())                                                        // self
+          val end     = readEnd()
           val classes = new ListBuffer[ClsDef]
           val types   = new ListBuffer[TypeDef]
           val fields  = new ListBuffer[ValDef]
           val meths   = new ListBuffer[DefDef]
           val terms   = new ListBuffer[TermMemberDef] // fields and meths together, in source order
+          while (nextByte == TYPEPARAM) skipTree(readByte()) // tparams
+          // a class parameter is a field too: `private[p] val x` has its accessor's modifiers here
+          while (nextByte == PARAM || nextByte == EMPTYCLAUSE || nextByte == SPLITCLAUSE)
+            readByte() match {
+              case PARAM => val v = readValDef(); fields += v; terms += v
+              case tag   => skipTree(tag)
+            }
+          while (nextByte != SELFDEF && nextByte != DEFDEF) skipTree(readByte()) // parents
+          if (nextByte == SELFDEF) skipTree(readByte())                          // self
           doUntil(end)(readByte() match {
             case TYPEDEF => readTypeDef() match {
                 case clsDef: ClsDef => classes += clsDef

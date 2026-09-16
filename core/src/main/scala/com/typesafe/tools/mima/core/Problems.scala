@@ -48,6 +48,7 @@ sealed abstract class Problem extends ProblemRef {
     case MissingFieldProblem(ref)                         => s"${ref.memberString} does not have a correspondent in $affectedVersion version"
     case InaccessibleFieldProblem(ref)                    => s"${ref.memberString} is inaccessible in $affectedVersion version, it must be public."
     case InaccessibleMethodProblem(ref)                   => s"${ref.memberString} is inaccessible in $affectedVersion version, it must be public."
+    case MethodBecomesUnreachableProblem(_, newmeth)      => s"${newmeth.memberString} is unreachable in $affectedVersion version, it must be public."
     case IncompatibleFieldTypeProblem(ref, newfld)        => s"${ref.memberString}'s type is different in $affectedVersion version, where it is: ${newfld.tpe} rather than: ${ref.tpe}"
     case IncompatibleMethTypeProblem(ref, newmeth :: Nil) => s"${ref.memberString}'s type is different in $affectedVersion version, where it is ${newmeth.tpe} instead of ${ref.tpe}"
     case IncompatibleMethTypeProblem(ref, newmeths)       => s"${ref.memberString} in $affectedVersion version does not have a correspondent with same parameter signature among ${newmeths.map(_.tpe).mkString(", ")}"
@@ -96,6 +97,7 @@ sealed abstract class MissingMethodProblem(meth: MethodInfo)                    
 final case class DirectMissingMethodProblem(meth: MethodInfo)                                 extends MissingMethodProblem(meth)
 final case class ReversedMissingMethodProblem(meth: MethodInfo)                               extends MissingMethodProblem(meth)
 final case class InaccessibleMethodProblem(newmeth: MethodInfo)                               extends MemberProblem(newmeth)
+final case class MethodBecomesUnreachableProblem(oldmeth: MethodInfo, newmeth: MethodInfo)    extends MemberProblem(oldmeth)
 final case class IncompatibleMethTypeProblem(oldmeth: MethodInfo, newmeths: List[MethodInfo]) extends MemberProblem(oldmeth)
 final case class IncompatibleResultTypeProblem(oldmeth: MethodInfo, newmeth: MethodInfo)      extends MemberProblem(oldmeth)
 final case class IncompatibleSignatureProblem(oldmeth: MethodInfo, newmeth: MethodInfo)       extends MemberProblem(oldmeth)
