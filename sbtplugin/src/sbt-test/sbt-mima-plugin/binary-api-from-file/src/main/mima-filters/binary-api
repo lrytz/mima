@@ -1,0 +1,2 @@
+# bar was public before 0.0.1, so mima keeps checking it
+BinaryApi.keep[MethodBecomesUnreachableProblem]("foo.A.bar"),

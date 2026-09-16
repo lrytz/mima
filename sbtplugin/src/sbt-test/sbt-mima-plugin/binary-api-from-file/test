@@ -1,0 +1,13 @@
+> set Compile / scalaSource := baseDirectory.value /"src" /"main" /"scala" /"v1"
+> set version := s"0.0.1-SNAPSHOT"
+> publishLocal
+
+> set Compile / scalaSource := baseDirectory.value /"src" /"main" /"scala" /"v2"
+> set version := s"0.0.2-SNAPSHOT"
+
+# the binary-api file keeps bar checked, so its removal is reported
+-> mimaReportBinaryIssues
+
+# without the entries nothing sees bar at all
+> set mimaBinaryApi := Nil
+> mimaReportBinaryIssues

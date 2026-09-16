@@ -2,7 +2,7 @@
 package com.typesafe.tools.mima
 package plugin
 
-import com.typesafe.tools.mima.core.{ Problem, ProblemFilter }
+import com.typesafe.tools.mima.core.{ BinaryApiEntry, Problem, ProblemFilter }
 import sbt.{ File, ModuleID, settingKey, taskKey } // no sbt._, to avoid 1.3+ only singleFileJsonFormatter
 import sbt.librarymanagement.DependencyResolution
 
@@ -19,6 +19,8 @@ class MimaKeys {
   final val mimaFailOnProblem           = settingKey[Boolean]("if true, fail the build on binary incompatibility detection.")
   final val mimaFailOnNoPrevious        = settingKey[Boolean]("if true, fail the build if no previous artifacts are set.")
   final val mimaReportSignatureProblems = settingKey[Boolean]("if true, report `IncompatibleSignatureProblem`s.")
+  @transient
+  final val mimaBinaryApi               = taskKey[Seq[BinaryApiEntry]]("Definitions to keep checking though the source no longer makes them part of the API.")
 
   @transient
   final val mimaDependencyResolution = taskKey[DependencyResolution]("DependencyResolution to use to fetch previous artifacts.")
