@@ -41,7 +41,8 @@ sealed class ConcretePackageInfo(val owner: PackageInfo, cp: ClassPath, pkg: Str
 final private[core] class DefinitionsPackageInfo(defs: Definitions)
     extends ConcretePackageInfo(NoPackageInfo, defs.classPath, ClassPath.RootPackage, defs)
 
-final private[mima] class DefinitionsTargetPackageInfo(root: PackageInfo, cp: ClassPath)
+final private[mima] class DefinitionsTargetPackageInfo(root: PackageInfo, cp: ClassPath,
+    override val binaryApi: BinaryApiSpec = BinaryApiSpec.empty)
     extends SyntheticPackageInfo(root, "<root>") {
   // `root` covers the full classpath. Only classes from the compared artifact belong to the target.
   override lazy val classes = cp.classes(ClassPath.RootPackage).map { f =>
@@ -54,6 +55,7 @@ final private[mima] class DefinitionsTargetPackageInfo(root: PackageInfo, cp: Cl
 sealed abstract class PackageInfo {
   def name: String
   def owner: PackageInfo
+  def binaryApi: BinaryApiSpec = BinaryApiSpec.empty
   def definitions: Definitions
   def packages: mutable.Map[String, PackageInfo]
   def classes: Map[String, ClassInfo]

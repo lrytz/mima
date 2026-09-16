@@ -10,6 +10,11 @@ trait ProblemRef {
     matchName.map(name => s"""ProblemFilters.exclude[${getClass.getSimpleName}]("$name")""")
 }
 
+/** Base trait for reports that mima will no longer check a definition. These are not actual breaks between
+ * two versions, they are filtered out in forwards checking. Adding these problems to mimaBinaryApi puts
+ *  the definition back under mima's watch. */
+sealed trait StopsCheckingProblem extends Problem
+
 trait TemplateRef extends ProblemRef
 
 trait MemberRef extends ProblemRef
@@ -28,6 +33,12 @@ sealed abstract class Problem extends ProblemRef {
   final def isExternallyAccessible: Boolean = this match {
     case p: TemplateProblem => p.ref.isExternallyAccessible
     case p: MemberProblem   => p.ref.isExternallyAccessible
+  }
+
+  /** The entry to add to `mimaBinaryApi` to keep mima checking the definition. */
+  final def howToKeep: Option[String] = this match {
+    case _: StopsCheckingProblem => matchName.map(name => s"""BinaryApi.keep[${getClass.getSimpleName}]("$name")""")
+    case _                       => None
   }
 
   /** 'affectedVersion' is "current" for bincompat, "other" or "previous" for forward-compat. */
@@ -72,8 +83,8 @@ sealed abstract class TemplateProblem(val ref: ClassInfo)                       
 final case class MissingClassProblem(oldclazz: ClassInfo)                                    extends TemplateProblem(oldclazz)
 final case class IncompatibleTemplateDefProblem(oldclazz: ClassInfo, newclazz: ClassInfo)    extends TemplateProblem(oldclazz)
 final case class InaccessibleClassProblem(newclazz: ClassInfo)                               extends TemplateProblem(newclazz)
-final case class ClassBecomesUnreachableProblem(oldclazz: ClassInfo, newclazz: ClassInfo)    extends TemplateProblem(oldclazz)
-final case class HierarchyBecomesClosedProblem(oldclazz: ClassInfo)                          extends TemplateProblem(oldclazz)
+final case class ClassBecomesUnreachableProblem(oldclazz: ClassInfo, newclazz: ClassInfo)    extends TemplateProblem(oldclazz) with StopsCheckingProblem
+final case class HierarchyBecomesClosedProblem(oldclazz: ClassInfo)                          extends TemplateProblem(oldclazz) with StopsCheckingProblem
 final case class AbstractClassProblem(oldclazz: ClassInfo)                                   extends TemplateProblem(oldclazz)
 final case class FinalClassProblem(oldclazz: ClassInfo)                                      extends TemplateProblem(oldclazz)
 final case class CyclicTypeReferenceProblem(clazz: ClassInfo)                                extends TemplateProblem(clazz)
@@ -97,7 +108,7 @@ sealed abstract class MissingMethodProblem(meth: MethodInfo)                    
 final case class DirectMissingMethodProblem(meth: MethodInfo)                                 extends MissingMethodProblem(meth)
 final case class ReversedMissingMethodProblem(meth: MethodInfo)                               extends MissingMethodProblem(meth)
 final case class InaccessibleMethodProblem(newmeth: MethodInfo)                               extends MemberProblem(newmeth)
-final case class MethodBecomesUnreachableProblem(oldmeth: MethodInfo, newmeth: MethodInfo)    extends MemberProblem(oldmeth)
+final case class MethodBecomesUnreachableProblem(oldmeth: MethodInfo, newmeth: MethodInfo)    extends MemberProblem(oldmeth) with StopsCheckingProblem
 final case class IncompatibleMethTypeProblem(oldmeth: MethodInfo, newmeths: List[MethodInfo]) extends MemberProblem(oldmeth)
 final case class IncompatibleResultTypeProblem(oldmeth: MethodInfo, newmeth: MethodInfo)      extends MemberProblem(oldmeth)
 final case class IncompatibleSignatureProblem(oldmeth: MethodInfo, newmeth: MethodInfo)       extends MemberProblem(oldmeth)

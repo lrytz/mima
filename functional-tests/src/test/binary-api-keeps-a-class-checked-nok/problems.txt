@@ -1,0 +1,1 @@
+private[..] class foo.Impl does not have a correspondent in new version

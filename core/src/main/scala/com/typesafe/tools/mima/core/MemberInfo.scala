@@ -102,7 +102,10 @@ private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, fla
     }
   /** Private in Scala, so no client can call it -- unless it is @publicInBinary (SIP-52): an
    *  inline method outside the scope calls it directly once inlined. */
-  def isHiddenByScala: Boolean = (isScopedPrivate || isPrivate) && !annotations.contains(MethodInfo.PublicInBinary)
+  def isHiddenByScala: Boolean =
+    (isScopedPrivate || isPrivate) && !annotations.contains(MethodInfo.PublicInBinary) && !keptBinaryApi
+
+  private def keptBinaryApi: Boolean = owner.owner.root.binaryApi.keepsMethod(fullName)
 
   def nonAccessible: Boolean = {
     !isBytecodePublic || isHiddenByScala || isBytecodeSynthetic || isClassInitializer ||
