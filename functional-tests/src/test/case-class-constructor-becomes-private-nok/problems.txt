@@ -1,1 +1,1 @@
-private method this()Unit in class A is unreachable in new version, it must be public.
+private method this()Unit in class A is not part of the API in new version, so a later change to it will no longer be reported, though it would break clients calling it today

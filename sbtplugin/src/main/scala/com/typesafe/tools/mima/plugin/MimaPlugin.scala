@@ -54,6 +54,7 @@ object MimaPlugin extends AutoPlugin {
     mimaBackwardIssueFilters := SbtMima.issueFiltersFromFiles(mimaFiltersDirectory.value, "\\.(?:backward[s]?|both)\\.excludes".r, streams.value),
     mimaForwardIssueFilters := SbtMima.issueFiltersFromFiles(mimaFiltersDirectory.value, "\\.(?:forward[s]?|both)\\.excludes".r, streams.value),
     mimaFiltersDirectory := (Compile / sourceDirectory).value / "mima-filters",
+    mimaBinaryApi := SbtMima.binaryApiFromFile(mimaFiltersDirectory.value, streams.value),
   )
 
   @deprecated("Switch to enablePlugins(MimaPlugin)", "0.7.0")
@@ -87,6 +88,7 @@ object MimaPlugin extends AutoPlugin {
 
   val binaryIssuesFinder: Def.Initialize[Task[BinaryIssuesFinder]] = Def.task {
     val log = streams.value.log
+    val binaryApi = mimaBinaryApi.value
     val currClassfiles = mimaCurrentClassfiles.value
     val cp = (mimaFindBinaryIssues / fullClasspath).value
     val sv = scalaVersion.value
@@ -105,17 +107,25 @@ object MimaPlugin extends AutoPlugin {
         log.info(s"$projName: mimaPreviousArtifacts is empty, not analyzing binary compatibility.")
       }
 
-      prevClassfiles.iterator.map { case (moduleId, prevClassfiles) =>
-        moduleId -> SbtMima.runMima(
+      // an entry no definition needed anywhere is a typo, or names something public again or gone.
+      var unused = binaryApi.toSet
+      val issues = prevClassfiles.iterator.map { case (moduleId, prevClassfiles) =>
+        val (problems, unusedHere) = SbtMima.runMima(
           prevClassfiles,
           currClassfiles,
           toOldClasspath(cp),
           checkDirection,
           sv,
           log,
-          excludeAnnots
+          excludeAnnots,
+          binaryApi
         )
-      }
+        unused = unused.intersect(unusedHere.toSet)
+        moduleId -> problems
+      }.toList
+      for (entry <- binaryApi if unused(entry))
+        log.warn(s"$projName: mimaBinaryApi entry has no effect, nothing hidden matches it: $entry")
+      issues.iterator
     }
   }
 

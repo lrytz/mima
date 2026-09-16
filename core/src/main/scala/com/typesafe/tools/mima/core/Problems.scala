@@ -10,6 +10,11 @@ trait ProblemRef {
     matchName.map(name => s"""ProblemFilters.exclude[${getClass.getSimpleName}]("$name")""")
 }
 
+/** Base trait for reports that mima will no longer check a definition. These are not actual breaks between
+ * two versions, they are filtered out in forwards checking. Adding these problems to mimaBinaryApi puts
+ *  the definition back under mima's watch. */
+sealed trait StopsCheckingProblem extends Problem
+
 trait TemplateRef extends ProblemRef
 
 trait MemberRef extends ProblemRef
@@ -30,6 +35,12 @@ sealed abstract class Problem extends ProblemRef {
     case p: MemberProblem   => p.ref.isExternallyAccessible
   }
 
+  /** The entry to add to `mimaBinaryApi` to keep mima checking the definition. */
+  final def howToKeep: Option[String] = this match {
+    case _: StopsCheckingProblem => matchName.map(name => s"""BinaryApi.keep[${getClass.getSimpleName}]("$name")""")
+    case _                       => None
+  }
+
   /** 'affectedVersion' is "current" for bincompat, "other" or "previous" for forward-compat. */
   final def description: String => String = getDescription(_)
 
@@ -37,7 +48,7 @@ sealed abstract class Problem extends ProblemRef {
     case MissingClassProblem(oldclazz)                    => s"${oldclazz.classString} does not have a correspondent in $affectedVersion version"
     case IncompatibleTemplateDefProblem(ref, newclazz)    => s"declaration of ${ref.description} is ${newclazz.description} in $affectedVersion version; changing ${ref.declarationPrefix} to ${newclazz.declarationPrefix} breaks client code"
     case InaccessibleClassProblem(ref)                    => s"${ref.classString} is inaccessible in $affectedVersion version, it must be public."
-    case ClassBecomesUnreachableProblem(_, newclazz)      => s"${newclazz.classString} is unreachable in $affectedVersion version, it must be public."
+    case ClassBecomesUnreachableProblem(_, newclazz)      => s"${newclazz.classString} is not part of the API in $affectedVersion version, so a later change to it will no longer be reported, though it would break clients using it today"
     case HierarchyBecomesClosedProblem(ref)               => s"${ref.classString} was extensible; in $affectedVersion version it is sealed and all its subtypes are closed, so an abstract method added to it later will no longer be reported, though it would break clients implementing it today"
     case AbstractClassProblem(ref)                        => s"${ref.classString} was concrete; is declared abstract in $affectedVersion version"
     case FinalClassProblem(ref)                           => s"${ref.classString} is declared final in $affectedVersion version"
@@ -48,7 +59,7 @@ sealed abstract class Problem extends ProblemRef {
     case MissingFieldProblem(ref)                         => s"${ref.memberString} does not have a correspondent in $affectedVersion version"
     case InaccessibleFieldProblem(ref)                    => s"${ref.memberString} is inaccessible in $affectedVersion version, it must be public."
     case InaccessibleMethodProblem(ref)                   => s"${ref.memberString} is inaccessible in $affectedVersion version, it must be public."
-    case MethodBecomesUnreachableProblem(_, newmeth)      => s"${newmeth.memberString} is unreachable in $affectedVersion version, it must be public."
+    case MethodBecomesUnreachableProblem(_, newmeth)      => s"${newmeth.memberString} is not part of the API in $affectedVersion version, so a later change to it will no longer be reported, though it would break clients calling it today"
     case IncompatibleFieldTypeProblem(ref, newfld)        => s"${ref.memberString}'s type is different in $affectedVersion version, where it is: ${newfld.tpe} rather than: ${ref.tpe}"
     case IncompatibleMethTypeProblem(ref, newmeth :: Nil) => s"${ref.memberString}'s type is different in $affectedVersion version, where it is ${newmeth.tpe} instead of ${ref.tpe}"
     case IncompatibleMethTypeProblem(ref, newmeths)       => s"${ref.memberString} in $affectedVersion version does not have a correspondent with same parameter signature among ${newmeths.map(_.tpe).mkString(", ")}"
@@ -72,8 +83,8 @@ sealed abstract class TemplateProblem(val ref: ClassInfo)                       
 final case class MissingClassProblem(oldclazz: ClassInfo)                                    extends TemplateProblem(oldclazz)
 final case class IncompatibleTemplateDefProblem(oldclazz: ClassInfo, newclazz: ClassInfo)    extends TemplateProblem(oldclazz)
 final case class InaccessibleClassProblem(newclazz: ClassInfo)                               extends TemplateProblem(newclazz)
-final case class ClassBecomesUnreachableProblem(oldclazz: ClassInfo, newclazz: ClassInfo)    extends TemplateProblem(oldclazz)
-final case class HierarchyBecomesClosedProblem(oldclazz: ClassInfo)                          extends TemplateProblem(oldclazz)
+final case class ClassBecomesUnreachableProblem(oldclazz: ClassInfo, newclazz: ClassInfo)    extends TemplateProblem(oldclazz) with StopsCheckingProblem
+final case class HierarchyBecomesClosedProblem(oldclazz: ClassInfo)                          extends TemplateProblem(oldclazz) with StopsCheckingProblem
 final case class AbstractClassProblem(oldclazz: ClassInfo)                                   extends TemplateProblem(oldclazz)
 final case class FinalClassProblem(oldclazz: ClassInfo)                                      extends TemplateProblem(oldclazz)
 final case class CyclicTypeReferenceProblem(clazz: ClassInfo)                                extends TemplateProblem(clazz)
@@ -97,7 +108,7 @@ sealed abstract class MissingMethodProblem(meth: MethodInfo)                    
 final case class DirectMissingMethodProblem(meth: MethodInfo)                                 extends MissingMethodProblem(meth)
 final case class ReversedMissingMethodProblem(meth: MethodInfo)                               extends MissingMethodProblem(meth)
 final case class InaccessibleMethodProblem(newmeth: MethodInfo)                               extends MemberProblem(newmeth)
-final case class MethodBecomesUnreachableProblem(oldmeth: MethodInfo, newmeth: MethodInfo)    extends MemberProblem(oldmeth)
+final case class MethodBecomesUnreachableProblem(oldmeth: MethodInfo, newmeth: MethodInfo)    extends MemberProblem(oldmeth) with StopsCheckingProblem
 final case class IncompatibleMethTypeProblem(oldmeth: MethodInfo, newmeths: List[MethodInfo]) extends MemberProblem(oldmeth)
 final case class IncompatibleResultTypeProblem(oldmeth: MethodInfo, newmeth: MethodInfo)      extends MemberProblem(oldmeth)
 final case class IncompatibleSignatureProblem(oldmeth: MethodInfo, newmeth: MethodInfo)       extends MemberProblem(oldmeth)

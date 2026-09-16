@@ -4,7 +4,8 @@ package com.typesafe.tools.mima.lib
 import java.io.File
 import java.nio.file.Files
 
-import com.typesafe.tools.mima.core.{Problem, ProblemFilter}
+import com.typesafe.tools.mima.core.util.log.ConsoleLogging
+import com.typesafe.tools.mima.core.{BinaryApi, BinaryApiEntry, BinaryApiSpec, Problem, ProblemFilter}
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -14,10 +15,12 @@ object CollectProblemsTest {
     () <- testCase.compileBoth
     (v1, v2) = direction.ordered(testCase.outV1, testCase.outV2)
     expected = readOracleFile(testCase.versionedFile(direction.oracleFile).jfile)
+    binaryApi = readBinaryApi(testCase.versionedFile("binary-api").jfile)
     () <- collectAndDiff(cp = Nil, v1.jfile, v2.jfile)(
       expected,
       excludeAnnots = excludeAnnots,
       direction = direction,
+      binaryApi = binaryApi,
       problemFilters =
         if (testCase.versionedFile("filterInaccessible").exists) List(filterInaccessible) else Nil,
     )
@@ -28,9 +31,10 @@ object CollectProblemsTest {
       problemFilters: List[ProblemFilter] = Nil,
       excludeAnnots: List[String] = Nil,
       direction: Direction = Backwards,
+      binaryApi: Seq[BinaryApiEntry] = Nil,
   ): Try[Unit] = {
-    val problems =
-      new MiMaLib(cp).collectProblems(v1, v2, excludeAnnots, direction == Forwards).filter(problemFilters.foldAll)
+    val mima = new MiMaLib(cp, ConsoleLogging, new BinaryApiSpec(binaryApi))
+    val problems = mima.collectProblems(v1, v2, excludeAnnots, direction == Forwards).filter(problemFilters.foldAll)
     val affectedVersion = direction match {
       case Backwards => "new"
       case Forwards  => "other"
@@ -61,6 +65,13 @@ object CollectProblemsTest {
         Failure(new Exception("CollectProblemsTest failure", null, false, false) {})
     }
   }
+
+  /** The `binary-api` file of a test case, if it has one. */
+  def readBinaryApi(file: File): Seq[BinaryApiEntry] =
+    if (!file.exists) Nil
+    else
+      Files.lines(file.toPath).iterator.asScala
+        .map(_.trim).filter(l => l.nonEmpty && !l.startsWith("#")).map(BinaryApi.parse).toList
 
   def readOracleFile(oracleFile: File): List[String] = {
     Files.lines(oracleFile.toPath).iterator.asScala.filter(!_.startsWith("#")).toList

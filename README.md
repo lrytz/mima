@@ -282,6 +282,42 @@ last one at which MiMa can tell you that an abstract method you add would break 
 Sealing a trait closes a hierarchy; so does making its last open subclass `final` or
 `private[foo]`.
 
+### Keeping a definition checked
+
+Narrowing a public definition to `private[foo]`, or closing a hierarchy, is binary compatible: the
+bytecode stays public. But MiMa reports anyway, as `MethodBecomesUnreachableProblem`,
+`ClassBecomesUnreachableProblem` or `HierarchyBecomesClosedProblem`, because from that version on
+it stops watching the definition, while code compiled against an earlier release still calls it.
+A later removal would go unreported.
+
+Filtering such a report would be counter-productive. It silences the notice, the definition
+stays out of sight, and once `mimaPreviousArtifacts` moves to a new version, the filter is dead.
+`mimaBinaryApi` solves this problem:
+
+```scala
+mimaBinaryApi += BinaryApi.keep[MethodBecomesUnreachableProblem]("foo.C.bar")
+```
+
+MiMa now checks `bar` as it checks a public method, and the message about narrowing is silenced.
+The `keep` entry names the kind of problem MiMa continues checking:
+
+| entry | keeps |
+| --- | --- |
+| `keep[ClassBecomesUnreachableProblem]("foo.C")` | the type checked, with its members and its accessible nested classes |
+| `keep[MethodBecomesUnreachableProblem]("foo.C.bar")` | the method checked |
+| `keep[HierarchyBecomesClosedProblem]("foo.T")` | an abstract method added to the type later reported |
+
+Names are printed in the report, `*` stands for any part of a name. An object has two classes
+(`O` and `O$`), so it takes two entries (same as with filters). Entries can also go in
+`src/main/mima-filters/binary-api`, one per line, `#` for comments.
+
+A `keep` entry that is unused is reported as having no effect. It can either be a typo, or that the
+named definition is public again, or gone.
+
+On Scala 3.4+,
+[`@publicInBinary`](https://docs.scala-lang.org/sips/binary-api.html) says the same about a method
+at the definition site, and MiMa honours it.
+
 ### Annotation-based exclusions
 
 The `mimaExcludeAnnotations` setting can be used to tell MiMa to

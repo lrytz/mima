@@ -19,17 +19,25 @@ import scala.util.matching._
 object SbtMima {
   /** Runs MiMa and returns a two lists of potential binary incompatibilities,
       the first for backward compatibility checking, and the second for forward checking. */
-  def runMima(prev: File, curr: File, cp: Seq[Attributed[File]], dir: String, scalaVersion: String, logger: Logger, excludeAnnots: List[String]): (List[Problem], List[Problem]) = {
+  def runMima(prev: File, curr: File, cp: Seq[Attributed[File]], dir: String, scalaVersion: String, logger: Logger, excludeAnnots: List[String]): (List[Problem], List[Problem]) =
+    runMima(prev, curr, cp, dir, scalaVersion, logger, excludeAnnots, Nil)._1
+
+  /** Runs MiMa and returns two lists of potential binary incompatibilities, the first for backward
+      compatibility checking and the second for forward checking, along with the unused `binaryApi` entries */
+  def runMima(prev: File, curr: File, cp: Seq[Attributed[File]], dir: String, scalaVersion: String, logger: Logger,
+      excludeAnnots: List[String], binaryApi: Seq[BinaryApiEntry]): ((List[Problem], List[Problem]), Seq[BinaryApiEntry]) = {
     sanityCheckScalaVersion(scalaVersion)
-    val mimaLib = new MiMaLib(Attributed.data(cp), new SbtLogger(logger))
+    val spec = new BinaryApiSpec(binaryApi)
+    val mimaLib = new MiMaLib(Attributed.data(cp), new SbtLogger(logger), spec)
     def checkBC = mimaLib.collectProblems(prev, curr, excludeAnnots)
     def checkFC = mimaLib.collectProblems(curr, prev, excludeAnnots, forwards = true)
-    dir match {
+    val problems = dir match {
       case "backward" | "backwards" => (checkBC, Nil)
       case "forward" | "forwards"   => (Nil, checkFC)
       case "both"                   => (checkBC, checkFC)
       case _                        => (Nil, Nil)
     }
+    (problems, mimaLib.unusedBinaryApi)
   }
 
   private def sanityCheckScalaVersion(scalaVersion: String) = {
@@ -84,7 +92,15 @@ object SbtMima {
       for (p <- backErrors) doLog(" * " + p.description("current"))
       for (p <- forwErrors) doLog(" * " + p.description("other"))
 
-      val allFilters = backErrors.flatMap(_.howToFilter) ++ forwErrors.flatMap(_.howToFilter)
+      val problems = backErrors ++ forwErrors
+      val keeps = problems.flatMap(_.howToKeep)
+      val allFilters = problems.filter(_.howToKeep.isEmpty).flatMap(_.howToFilter)
+      if (keeps.nonEmpty) {
+        doLog("These are binary compatible, but after updating mimaPreviousArtifacts, later changes to them are no longer reported.")
+        doLog("To keep mima checking them, add to mimaBinaryApi, or to src/main/mima-filters/binary-api:")
+        for (k <- keeps) doLog("   " + k + ",")
+        doLog("See https://github.com/scala-garden/mima#keeping-a-definition-checked")
+      }
       if (allFilters.nonEmpty) {
         doLog("Filter with:")
         for (f <- allFilters) doLog("   " + f + ",")
@@ -92,6 +108,28 @@ object SbtMima {
 
       if (failOnProblem)
         sys.error(msg)
+    }
+  }
+
+  /** The `binary-api` file of a project, if it has one: the definitions it keeps checking. */
+  def binaryApiFromFile(filtersDirectory: File, s: TaskStreams): Seq[BinaryApiEntry] = {
+    val file = filtersDirectory / "binary-api"
+    if (!file.exists) Nil
+    else {
+      val entries = new ListBuffer[BinaryApiEntry]
+      val failures = new ListBuffer[String]
+      val source = Source.fromFile(file)
+      try
+        for ((rawText, line) <- source.getLines().zipWithIndex if !rawText.startsWith("#") && rawText.trim.nonEmpty)
+          try entries += BinaryApi.parse(rawText)
+          catch { case NonFatal(t) => failures += s"Error while parsing $file, line $line: ${t.getMessage}" }
+      catch { case NonFatal(t) => failures += s"Couldn't load '$file': ${t.getMessage}" }
+      finally source.close()
+      if (failures.nonEmpty) {
+        failures.foreach(s.log.error(_))
+        throw new RuntimeException(s"Loading the mima binary-api file failed with ${failures.size} failures.")
+      }
+      entries.toSeq
     }
   }
 
@@ -130,7 +168,8 @@ object SbtMima {
         for {
           (rawText, line) <- source.getLines().zipWithIndex
           if !rawText.startsWith("#")
-          text = rawText.trim
+          // the report prints filters comma-separated, ready to paste into a Seq or into a file
+          text = rawText.trim.stripSuffix(",")
           if text != ""
         } {
           text match {

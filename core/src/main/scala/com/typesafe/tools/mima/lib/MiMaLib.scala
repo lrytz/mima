@@ -7,23 +7,17 @@ import com.typesafe.tools.mima.core._
 import com.typesafe.tools.mima.core.util.log.{ ConsoleLogging, Logging }
 import com.typesafe.tools.mima.lib.analyze.Analyzer
 
-object MiMaLib {
-  /** Problems that report what mima will no longer check, rather than a break in this pair. */
-  private def guardsLaterVersions(problem: Problem) = problem match {
-    case _: ClassBecomesUnreachableProblem | _: MethodBecomesUnreachableProblem | _: HierarchyBecomesClosedProblem => true
-    case _                                                                                                         => false
-  }
-}
+final class MiMaLib(cp: Seq[File], log: Logging = ConsoleLogging, binaryApi: BinaryApiSpec = BinaryApiSpec.empty) {
+  def this(cp: Seq[File], log: Logging) = this(cp, log, BinaryApiSpec.empty)
 
-final class MiMaLib(cp: Seq[File], log: Logging = ConsoleLogging) {
-  import MiMaLib._
+  def unusedBinaryApi: Seq[BinaryApiEntry] = binaryApi.unused
 
   private val classpath = ClassPath.of(cp.flatMap(ClassPath.fromJarOrDir(_)) :+ ClassPath.base)
 
   private def createPackage(dirOrJar: File): PackageInfo = {
     ClassPath.fromJarOrDir(dirOrJar).fold(createEmptyPackage(dirOrJar)) { cp =>
       val defs = new Definitions(ClassPath.of(List(cp, classpath)))
-      val pkg = new DefinitionsTargetPackageInfo(defs.root, cp)
+      val pkg = new DefinitionsTargetPackageInfo(defs.root, cp, binaryApi)
       for (pkgName <- cp.packages(ClassPath.RootPackage)) {
         pkg.packages(pkgName) = new ConcretePackageInfo(pkg, cp, pkgName, defs)
       }
@@ -35,7 +29,7 @@ final class MiMaLib(cp: Seq[File], log: Logging = ConsoleLogging) {
   private def createEmptyPackage(missingDirOrJar: File): PackageInfo = {
     log.debug(s"not a directory or jar file: $missingDirOrJar.  This is normal for POM-only modules.  Proceeding with empty set of packages.")
     val defs = new Definitions(classpath)
-    new DefinitionsTargetPackageInfo(defs.root, ClassPath.of(Nil))
+    new DefinitionsTargetPackageInfo(defs.root, ClassPath.of(Nil), binaryApi)
   }
 
   private def traversePackages(oldpkg: PackageInfo, newpkg: PackageInfo, excludeAnnots: List[AnnotInfo]): List[Problem] = {
@@ -60,6 +54,6 @@ final class MiMaLib(cp: Seq[File], log: Logging = ConsoleLogging) {
     log.debug(s"[new version in: ${newPackage.definitions}]")
     log.debug(s"classpath: ${classpath.asClassPathString}")
     val problems = traversePackages(oldPackage, newPackage, excludeAnnots.map(AnnotInfo(_)))
-    if (forwards) problems.filterNot(guardsLaterVersions) else problems
+    if (forwards) problems.filterNot(_.isInstanceOf[StopsCheckingProblem]) else problems
   }
 }

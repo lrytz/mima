@@ -155,11 +155,15 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
    *  This tests isSealed, not isClosed. A final class has no deferred methods, so
    *  MethodChecker.checkNew reports nothing about it. mima also never builds
    *  PackageInfo.subtypes for a library that seals nothing. */
-  private[mima] def isClosedHierarchy: Boolean = isSealed &&
+  private[mima] def isClosedHierarchy: Boolean = !keptExtensible && isSealed &&
     owner.root.subtypes.getOrElse(this, Set.empty).forall(_.isClosed)
 
   // a local or anonymous class is public in bytecode, but no client can name it
-  private[mima] def isDirectlyAccessible: Boolean = isBytecodePublic && !isScopedPrivate && !isPrivate && !isLocalClass
+  private[mima] def isDirectlyAccessible: Boolean =
+    isBytecodePublic && !isLocalClass && (!(isScopedPrivate || isPrivate) || keptBinaryApi)
+
+  private def keptBinaryApi: Boolean  = owner.root.binaryApi.keepsClass(fullName)
+  private def keptExtensible: Boolean = owner.root.binaryApi.keepsExtensible(fullName)
 
   private[mima] lazy val isExternallyAccessible: Boolean = isDirectlyAccessible && (outer == NoClass || outer.isExternallyAccessible)
 
