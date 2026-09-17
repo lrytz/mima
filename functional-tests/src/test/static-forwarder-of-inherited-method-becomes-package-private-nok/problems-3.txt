@@ -1,3 +1,0 @@
-# Scala 3 keeps emitting the forwarder (https://github.com/lampepfl/dotty/issues/10842).
-# It doubles a method mima already reports, so it is not reported itself.
-private[..] method make(Int)Int in class foo.Base is not part of the API in new version, so a later change to it will no longer be reported, though it would break clients calling it today

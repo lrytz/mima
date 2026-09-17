@@ -134,11 +134,6 @@ object TastyUnpickler {
       for (m <- clazz.methods.value if !declared(m.bytecodeName))
         m._absentFromPickle = true
       byName.foreach { case (name, pickleMethods) => doMethodOverloads(clazz, name, pickleMethods) }
-      // a static forwarder without a pickle entry takes the marks of the method it doubles (MethodInfo).
-      // The loop above flags the forwarders of a companion class with a pickle; flag the others here
-      val companion = clazz.companionClass
-      if (clazz.isModuleClass && companion != NoClass && !pickledClasses(companion))
-        for (f <- companion.methods.value) f._absentFromPickle = true
     }
 
     def doMethodOverloads(clazz: ClassInfo, name: Name, pickleMethods: Seq[TermMemberDef]) =

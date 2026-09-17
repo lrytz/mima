@@ -8,40 +8,40 @@ It's pronounced _MEE-ma_.
 
 ## What it is?
 
-MiMa can report binary modifications that may
-cause the JVM to throw a `java.lang.LinkageError` (or one of its subtypes,
-like `AbstractMethodError`) at runtime. Linkage errors are usually the
-consequence of modifications in classes/members signature.
+MiMa compares the classfiles of two versions of a library. It reports changes that make
+code compiled against the old version fail with the new one, with a `LinkageError` such as
+`NoSuchMethodError` or `AbstractMethodError`.
 
-MiMa compares all classfiles of two released libraries and reports all source
-of incompatibilities that may lead to a linkage error. MiMa provides you, the
-library maintainer, with a tool that can greatly automate and simplify the
-process of ensuring the release-to-release binary compatibility of your
-libraries.
+MiMa does not check behaviour: a method that keeps its signature but does something else
+is not reported. It does not check source compatibility either: a binary compatible
+change can still stop client code from compiling.
 
-A key aspect of MiMa to be aware of is that it only looks for *syntactic binary
-incompatibilities*. The semantic binary incompatibilities (such as adding or
-removing a method invocation) are not considered. This is a pragmatic approach
-as it is up to you, the library maintainer, to make sure that no semantic
-changes have occurred between two binary compatible releases. If a semantic
-change occurred, then you should make sure to provide this information as part
-of the new release's change list.
+### Scala clients, not Java clients
 
-In addition, it is worth mentioning that *binary compatibility does not imply
-source compatibility*, i.e., some of the changes that are considered compatible
-at the bytecode level may still break a codebase that depends on it.
-Interestingly, this is not an issue intrinsic to the Scala language. In the
-Java language binary compatibility does not imply source compatibility as well.
-MiMa focuses on binary compatibility and currently provides no insight into
-source compatibility.
+MiMa checks your API as Scala code sees it. Some changes break only Java clients, and
+MiMa does not report them:
+
+- `private[foo]` definitions and nested `private` classes are public in bytecode. Java
+  code can use them, MiMa ignores them. See
+  [Qualified private definitions](#qualified-private-definitions).
+- Java code can implement a sealed type. MiMa does not report new abstract methods in a
+  sealed hierarchy. See [Sealing](#sealing).
+- Java calls an object's methods through static forwarders in the companion class. MiMa
+  checks the object's methods, not the forwarders. A forwarder can disappear while the
+  method stays.
+- A class gets a public copy of each `private[foo]` method of its traits. MiMa ignores
+  these.
+- MiMa ignores methods with a `$` in their name, except extension methods, default
+  argument getters and `$init$`. Scala code cannot see them.
+- Generic signatures, which javac uses, are only compared on request. See
+  [IncompatibleSignatureProblem](#incompatiblesignatureproblem).
 
 ### See also: TASTy-MiMa
 
-For Scala 3, in addition to binary compatible, TASTy compatibility becomes
-increasingly important. Another tool,
-[TASTy-MiMa](https://github.com/scalacenter/tasty-mima), is designed to
-automatically check TASTy compatibility in much the same way that MiMa checks
-binary compatibility.
+Scala 3 compiles against TASTy, which holds more than the bytecode: exact Scala types,
+and the bodies of `inline` methods.
+[TASTy-MiMa](https://github.com/scalacenter/tasty-mima) checks TASTy compatibility the way
+MiMa checks bytecode. Use both for a Scala 3 library.
 
 ## Usage
 
@@ -65,14 +65,16 @@ mimaPreviousArtifacts := Set("com.example" %% "my-library" % "<version>")
 and run `mimaReportBinaryIssues` to see something like the following:
 
 ```
-[info] Found 4 potential binary incompatibilities
-[error]  * method rollbackTransactionResource()resource.Resource in object resource.Resource does not have a   correspondent in new version
-[error]  * method now()scala.util.continuations.ControlContext in trait resource.ManagedResourceOperations does not    have a correspondent in old version
-[error]  * abstract method now()scala.util.continuations.ControlContext in trait resource.ManagedResource does not have a correspondent in old version
-[error]  * method rollbackTransactionResource()resource.Resource in trait resource.MediumPriorityResourceImplicits does not have a correspondent in new version
-[error] {file:/home/jsuereth/project/personal/scala-arm/}scala-arm/*:mima-report-binary-issues: Binary compatibility check failed!
-[error] Total time: 15 s, completed May 18, 2012 11:32:29 AM
+[error] my-library: Failed binary compatibility check against com.example:my-library_3:1.0.0! Found 2 potential problems
+[error]  * method close()Unit in class com.example.Resource does not have a correspondent in current version
+[error]  * abstract method reset()Unit in trait com.example.Pool is present only in current version
+[error] Filter with:
+[error]    ProblemFilters.exclude[DirectMissingMethodProblem]("com.example.Resource.close"),
+[error]    ProblemFilters.exclude[ReversedMissingMethodProblem]("com.example.Pool.reset"),
 ```
+
+Each problem comes with a filter to accept it, see
+[Filtering binary incompatibilities](#filtering-binary-incompatibilities).
 
 ### Mill
 
@@ -160,47 +162,41 @@ mimaBinaryIssueFilters ++= Seq(
 
 ### IncompatibleSignatureProblem
 
-Most MiMa checks (`DirectMissingMethod`, `IncompatibleResultType`,
-`IncompatibleMethType`, etc) are against the "method descriptor", which
-is the "raw" type signature, without any information about generic parameters.
+Most MiMa checks compare erased types. `def names: List[String]` and
+`def names: List[Int]` look the same to them, yet a client compiled against the first
+casts each element to `String` and fails with a `ClassCastException`.
 
-The `IncompatibleSignature` check compares the `Signature`, which includes the
-full signature including generic parameters. This can catch real
-incompatibilities, but also sometimes triggers for a change in generics that
-would not in fact cause problems at run time. Notably, it will warn when
-updating your project to scala 2.12.9+ or 2.13.1+,
-see [this issue](https://github.com/scala-garden/mima/issues/423) for details.
+The compiler also writes a Java generic signature, the classfile's `Signature` attribute,
+which maps the Scala type as far as Java generics can express it. MiMa compares it with
 
-The same setting also enables `IncompatibleClassSignature`, which compares the
-`Signature` of a class rather than of a method. A client compiled against
+```scala
+ThisBuild / mimaReportSignatureProblems := true
+```
+
+or `-g` on the command line. It reports differences as `IncompatibleSignatureProblem`,
+and changed type arguments of a parent class as `IncompatibleClassSignatureProblem`:
 
 ```scala
 class Base[T](val value: T)
-class Public extends Base[String]("hi")
+class Public extends Base[String]("hi") // changed to Base[Integer]
 ```
 
-reads `value` as `Object` and casts it to `String`. Changing the parent to
-`Base[Integer]` leaves every descriptor untouched, so nothing else in MiMa
-notices, and the client gets a `ClassCastException`.
+The check is off by default because the mapping is imperfect:
 
-Only the type arguments a class passes to a parent it still has are compared.
-Gaining a parent changes the class signature too, but no client can have been
-compiled against it, so that alone is not reported.
+- It misses changes. A primitive type argument is written as `Object`, so `List[Int]` to
+  `List[Long]` looks unchanged, though a client that unboxes the element fails.
+- It reports changes that break nothing. Only a client that casts the value fails, and
+  some `Signature` changes are not type changes: Scala 2.12.9 and 2.13.1 changed how
+  value classes are written, see [#423](https://github.com/scala-garden/mima/issues/423).
 
-You can opt-in to these checks by setting:
-
-```scala
-import com.typesafe.tools.mima.plugin.MimaKeys._
-
-ThisBuild / mimaReportSignatureProblems := true
-```
+For Scala 3, [TASTy-MiMa](#see-also-tasty-mima) compares the Scala types themselves.
 
 ### Qualified private definitions
 
 `private[foo]` is a Scala rule, not a JVM one. In bytecode these definitions are
 public, so a client can end up depending on one even though it cannot name it.
 
-MiMa ignores a qualified-private **member**, such as `private[foo] def`: nothing
+MiMa ignores a qualified-private **member**, such as `private[foo] def`: no Scala code
 outside `foo` can call it. Narrowing a public member to `private[foo]` is reported,
 though, as `MethodBecomesUnreachableProblem`: an already-compiled caller keeps linking, but
 the member has left the API, and MiMa stops watching it from here on, so a later
@@ -216,7 +212,7 @@ once inlined, so MiMa checks it like a public member. Narrowing a public member 
 the annotation is.
 
 A nested `private class` is emitted ACC_PUBLIC too, and MiMa reads the same rules from
-the pickle: nothing outside the enclosing class can name it, so it is ignored, and
+the pickle: no Scala code outside the enclosing class can name it, so it is ignored, and
 narrowing a public nested class to `private` is reported the same way as narrowing it
 to `private[foo]`.
 
@@ -273,8 +269,8 @@ above it would silence the report about `C.bar`.
 MiMa reports a change that would break a client implementing one of your types (a new
 abstract method, a newly inherited one) only while a client can still write that
 implementation. Once a type is sealed and every one of its subtypes is closed
-(`final`, `sealed`, or no longer nameable from outside), nobody new can, so those
-checks stop.
+(`final`, `sealed`, or no longer nameable from outside), no new Scala code can, so
+those checks stop. Java code still can, since javac ignores `sealed`.
 
 Clients that implemented it while it was open still exist, though, so the version
 that closes the hierarchy is reported, as `HierarchyBecomesClosedProblem`: it is the
@@ -320,15 +316,8 @@ at the definition site, and MiMa honours it.
 
 ### Annotation-based exclusions
 
-The `mimaExcludeAnnotations` setting can be used to tell MiMa to
-ignore classes, objects, and methods that have a particular
-annotation.  Such an annotation might typically have "experimental" or
-"internal" in the name.
-
-The setting is a `Seq[String]` containing fully qualified annotation
-names.
-
-Example:
+`mimaExcludeAnnotations` makes MiMa ignore classes, objects, methods and vals that carry
+one of the given annotations, such as an "experimental" or "internal" marker:
 
 ```scala
 mimaExcludeAnnotations += "scala.annotation.experimental"
@@ -338,34 +327,17 @@ The annotation is read from the version being checked against, so the release th
 adds it is still checked in full; every release after it skips the annotated
 definition entirely, with no report.
 
-Caveat: `mimaExcludeAnnotations` is only implemented on Scala 3.
+On Scala 2, this works for classes and objects only, not for methods and vals.
 
 ## Setting different mimaPreviousArtifacts
 
-From time to time you may need to set `mimaPreviousArtifacts` according to some conditions.  For
-instance, if you have already ported your project to Scala 2.13 and set it up for cross-building to Scala 2.13,
-but still haven't cut a release, you may want to define `mimaPreviousArtifacts` according to the Scala version,
-with something like:
+`mimaPreviousArtifacts` can depend on other settings. For example, a cross-built project
+with no Scala 3 release yet has nothing to compare its Scala 3 build against:
 
 ```scala
 mimaPreviousArtifacts := {
-  if (CrossVersion.partialVersion(scalaVersion.value) == Some((2, 13)))
-    Set.empty
-  else
-    Set("com.example" %% "my-library" % "1.2.3")
-}
-```
-
-or with sbt's semantic version selectors:
-
-```scala
-import sbt.librarymanagement.{ SemanticSelector, VersionNumber }
-
-mimaPreviousArtifacts := {
-  if (VersionNumber(scalaVersion.value).matchesSemVer(SemanticSelector(">=2.13")))
-    Set.empty
-  else
-    Set("com.example" %% "my-library" % "1.2.3")
+  if (scalaBinaryVersion.value == "3") Set.empty
+  else Set("com.example" %% "my-library" % "1.2.3")
 }
 ```
 
@@ -377,9 +349,9 @@ The setting `mimaFailOnNoPrevious` defaults to `true` and will make
 To make `mimaReportBinaryIssues` not fail you may want to do one of the following:
 
 * set `mimaPreviousArtifacts` on all the projects that should be checking their binary compatibility
-* avoid calling `mimaPreviousArtifacts` when binary compatibility checking isn't needed
+* avoid calling `mimaReportBinaryIssues` when binary compatibility checking isn't needed
 * set `mimaFailOnNoPrevious := false` on specific projects that want to opt-out (alternatively `disablePlugins(MimaPlugin)`)
-* set `ThisBuild / mimaFailOnNoPrevious := false`, which disables it build-wide, effectively reverting back to the previous behaviour
+* set `ThisBuild / mimaFailOnNoPrevious := false`, which disables it build-wide
 
 ## Setting mimaPreviousArtifacts when name contains a "."
 

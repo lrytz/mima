@@ -1,2 +1,1 @@
 method f(java.lang.String)Int in object foo.O does not have a correspondent in new version
-static method f(java.lang.String)Int in class foo.O does not have a correspondent in new version
