@@ -48,11 +48,11 @@ private[mima] final class BinaryApiSpec(val entries: Seq[BinaryApiEntry]) {
   private def keeps(problem: Class[_], definition: String, signature: String = "") =
     entries.exists(e => e.keeps(problem, definition, signature) && { used += e; true })
 
-  def keepsClass(name: String): Boolean      = keeps(classOf[ClassBecomesUnreachableProblem], name)
-  def keepsExtensible(name: String): Boolean = keeps(classOf[HierarchyBecomesClosedProblem], name)
+  def keepsClass(name: String): Boolean      = keeps(classOf[ClassNoLongerCheckedProblem], name)
+  def keepsExtensible(name: String): Boolean = keeps(classOf[HierarchyNoLongerCheckedProblem], name)
 
   def keepsMethod(name: String, signature: String): Boolean =
-    keeps(classOf[MethodBecomesUnreachableProblem], name, signature)
+    keeps(classOf[MethodNoLongerCheckedProblem], name, signature)
 
   /** Entries no definition needed: a typo, or the definition is public again, or gone. */
   def unused: Seq[BinaryApiEntry] = entries.filterNot(used.contains)

@@ -12,7 +12,7 @@ import com.typesafe.tools.mima.core.IncompatibleResultTypeProblem
 import com.typesafe.tools.mima.core.IncompatibleSignatureProblem
 import com.typesafe.tools.mima.core.MemberInfo
 import com.typesafe.tools.mima.core.MemberProblem
-import com.typesafe.tools.mima.core.MethodBecomesUnreachableProblem
+import com.typesafe.tools.mima.core.MethodNoLongerCheckedProblem
 import com.typesafe.tools.mima.core.MissingFieldProblem
 import com.typesafe.tools.mima.core.MissingMethodProblem
 import com.typesafe.tools.mima.core.NewMixinForwarderProblem
@@ -76,28 +76,28 @@ case class ProblemFormatter(
         case _:    ReversedMissingMethodProblem                 => None
       }
 
-      case prob: ReversedAbstractMethodProblem if showForward    => Some(str(prob))
-      case _:    ReversedAbstractMethodProblem                   => None
-      case prob: MissingFieldProblem if showBackward             => Some(str(prob))
-      case _:    MissingFieldProblem                             => None
-      case prob: InaccessibleFieldProblem if showBackward        => Some(str(prob))
-      case _:    InaccessibleFieldProblem                        => None
-      case prob: IncompatibleFieldTypeProblem if showBackward    => Some(str(prob))
-      case _:    IncompatibleFieldTypeProblem                    => None
-      case prob: InaccessibleMethodProblem if showBackward       => Some(str(prob))
-      case _:    InaccessibleMethodProblem                       => None
-      case prob: MethodBecomesUnreachableProblem if showBackward => Some(str(prob))
-      case _:    MethodBecomesUnreachableProblem                 => None
-      case prob: IncompatibleMethTypeProblem if showBackward     => Some(str(prob))
-      case _:    IncompatibleMethTypeProblem                     => None
-      case prob: IncompatibleResultTypeProblem if showBackward   => Some(str(prob))
-      case _:    IncompatibleResultTypeProblem                   => None
-      case prob: FinalMethodProblem if showBackward              => Some(str(prob))
-      case _:    FinalMethodProblem                              => None
-      case prob: UpdateForwarderBodyProblem if showBackward      => Some(str(prob))
-      case _:    UpdateForwarderBodyProblem                      => None
-      case prob: NewMixinForwarderProblem if showBackward        => Some(str(prob))
-      case _:    NewMixinForwarderProblem                        => None
+      case prob: ReversedAbstractMethodProblem if showForward  => Some(str(prob))
+      case _:    ReversedAbstractMethodProblem                 => None
+      case prob: MissingFieldProblem if showBackward           => Some(str(prob))
+      case _:    MissingFieldProblem                           => None
+      case prob: InaccessibleFieldProblem if showBackward      => Some(str(prob))
+      case _:    InaccessibleFieldProblem                      => None
+      case prob: IncompatibleFieldTypeProblem if showBackward  => Some(str(prob))
+      case _:    IncompatibleFieldTypeProblem                  => None
+      case prob: InaccessibleMethodProblem if showBackward     => Some(str(prob))
+      case _:    InaccessibleMethodProblem                     => None
+      case prob: MethodNoLongerCheckedProblem if showBackward  => Some(str(prob))
+      case _:    MethodNoLongerCheckedProblem                  => None
+      case prob: IncompatibleMethTypeProblem if showBackward   => Some(str(prob))
+      case _:    IncompatibleMethTypeProblem                   => None
+      case prob: IncompatibleResultTypeProblem if showBackward => Some(str(prob))
+      case _:    IncompatibleResultTypeProblem                 => None
+      case prob: FinalMethodProblem if showBackward            => Some(str(prob))
+      case _:    FinalMethodProblem                            => None
+      case prob: UpdateForwarderBodyProblem if showBackward    => Some(str(prob))
+      case _:    UpdateForwarderBodyProblem                    => None
+      case prob: NewMixinForwarderProblem if showBackward      => Some(str(prob))
+      case _:    NewMixinForwarderProblem                      => None
 
       case prob: IncompatibleSignatureProblem
         if showBackward && showIncompatibleSignature => Some(str(prob))

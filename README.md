@@ -206,7 +206,7 @@ public, so a client can end up depending on one even though it cannot name it.
 
 MiMa ignores a qualified-private **member**, such as `private[foo] def`: no Scala code
 outside `foo` can call it. Narrowing a public member to `private[foo]` is reported,
-though, as `MethodBecomesUnreachableProblem`: an already-compiled caller keeps linking, but
+though, as `MethodNoLongerCheckedProblem`: an already-compiled caller keeps linking, but
 the member has left the API, and MiMa stops watching it from here on, so a later
 removal would go unreported.
 
@@ -237,7 +237,7 @@ object Lib { def go: C = new C }
 `bar` breaks it. MiMa reports changes to `C` and to its public members. A
 qualified-private class that never reaches a public signature is ignored.
 
-Losing that last escape route is reported, as `ClassBecomesUnreachableProblem`:
+Losing that last escape route is reported, as `ClassNoLongerCheckedProblem`:
 dropping `Lib.go`, or narrowing a public class to `private[foo]` in the first place,
 takes the class out of MiMa's sight, so nothing that happens to it afterwards can be
 reported. Make the class public, or filter the problem if it really is internal from
@@ -281,7 +281,7 @@ implementation. Once a type is sealed and every one of its subtypes is closed
 those checks stop. Java code still can, since javac ignores `sealed`.
 
 Clients that implemented it while it was open still exist, though, so the version
-that closes the hierarchy is reported, as `HierarchyBecomesClosedProblem`: it is the
+that closes the hierarchy is reported, as `HierarchyNoLongerCheckedProblem`: it is the
 last one at which MiMa can tell you that an abstract method you add would break them.
 Sealing a trait closes a hierarchy; so does making its last open subclass `final` or
 `private[foo]`.
@@ -289,8 +289,8 @@ Sealing a trait closes a hierarchy; so does making its last open subclass `final
 ### Keeping a definition checked
 
 Narrowing a public definition to `private[foo]`, or closing a hierarchy, is binary compatible: the
-bytecode stays public. But MiMa reports anyway, as `MethodBecomesUnreachableProblem`,
-`ClassBecomesUnreachableProblem` or `HierarchyBecomesClosedProblem`, because from that version on
+bytecode stays public. But MiMa reports anyway, as `MethodNoLongerCheckedProblem`,
+`ClassNoLongerCheckedProblem` or `HierarchyNoLongerCheckedProblem`, because from that version on
 it stops watching the definition, while code compiled against an earlier release still calls it.
 A later removal would go unreported.
 
@@ -299,7 +299,7 @@ stays out of sight, and once `mimaPreviousArtifacts` moves to a new version, the
 `mimaBinaryApi` solves this problem:
 
 ```scala
-mimaBinaryApi += BinaryApi.keep[MethodBecomesUnreachableProblem]("foo.C.bar(Int)Int")
+mimaBinaryApi += BinaryApi.keep[MethodNoLongerCheckedProblem]("foo.C.bar(Int)Int")
 ```
 
 MiMa now checks `bar` as it checks a public method, and the message about narrowing is silenced.
@@ -307,9 +307,9 @@ The `keep` entry names the kind of problem MiMa continues checking:
 
 | entry | keeps |
 | --- | --- |
-| `keep[ClassBecomesUnreachableProblem]("foo.C")` | the type checked, with its members and its accessible nested classes |
-| `keep[MethodBecomesUnreachableProblem]("foo.C.bar(Int)Int")` | the method checked |
-| `keep[HierarchyBecomesClosedProblem]("foo.T")` | an abstract method added to the type later reported |
+| `keep[ClassNoLongerCheckedProblem]("foo.C")` | the type checked, with its members and its accessible nested classes |
+| `keep[MethodNoLongerCheckedProblem]("foo.C.bar(Int)Int")` | the method checked |
+| `keep[HierarchyNoLongerCheckedProblem]("foo.T")` | an abstract method added to the type later reported |
 
 Names work as in filters, and `*` stands for any part of a name. An object has two classes,
 `O` and `O$`, so keeping it takes two entries; keeping a method of an object takes one. Entries

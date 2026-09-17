@@ -28,7 +28,7 @@ object Analyzer {
           // The ref is oldclazz, the only one a filter on Problem.isExternallyAccessible keeps.
           val noLongerChecked =
             if (newpkg.accessibleClasses(newclazz) || newclazz.isBytecodeLessVisibleThan(oldclazz)) Nil
-            else List(ClassBecomesUnreachableProblem(oldclazz, newclazz))
+            else List(ClassNoLongerCheckedProblem(oldclazz, newclazz))
           noLongerChecked ::: analyze(oldclazz, newclazz, log, excludeAnnots)
         case None => List(MissingClassProblem(oldclazz))
       }
