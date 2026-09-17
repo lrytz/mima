@@ -1,5 +1,4 @@
 # In Scala 2 none of these changes are present.  Positive progress IMO.
 method apply()A in object A does not have a correspondent in new version
-static method apply()A in class A does not have a correspondent in new version
 method copy()A in class A does not have a correspondent in new version
 private method this()Unit in class A is not part of the API in new version, so a later change to it will no longer be reported, though it would break clients calling it today

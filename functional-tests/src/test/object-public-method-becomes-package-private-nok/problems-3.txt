@@ -1,5 +1,0 @@
-# On Scala 3, privateWithin isn't honoured in static method emission
-# (https://github.com/lampepfl/dotty/issues/10842), so unlike Scala 2 the
-# forwarder is still emitted and isn't missing a correspondent. It doubles
-# a method mima already reports, so it is not reported itself.
-private[..] method foo(java.lang.Object,java.lang.Object)java.lang.Object in object bar.A is not part of the API in new version, so a later change to it will no longer be reported, though it would break clients calling it today
