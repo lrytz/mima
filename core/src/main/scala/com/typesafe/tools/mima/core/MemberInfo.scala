@@ -100,6 +100,14 @@ private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, fla
     _absentFromPickle && owner.allTraits.exists {
       _.methods.get(bytecodeName).exists(m => m.descriptor == descriptor && m.isScopedPrivate)
     }
+  /** A static forwarder on a companion class doubles a method of the object, declared or
+   *  inherited, and the bytecode says public where the source says `private[p]`. */
+  private def isScopedPrivateStaticForwarder: Boolean = _absentFromPickle && isBytecodeStatic && {
+    val module = owner.moduleClass
+    module != NoClass && (Iterator(module) ++ module.superClassChain.iterator).flatMap(_.methods.get(bytecodeName))
+      .exists { m => m.descriptor == descriptor && (m.isScopedPrivate || m.isPrivate) }
+  }
+
   /** Private in Scala, so no client can call it -- unless it is @publicInBinary (SIP-52): an
    *  inline method outside the scope calls it directly once inlined. */
   def isHiddenByScala: Boolean =
@@ -109,7 +117,7 @@ private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, fla
 
   def nonAccessible: Boolean = {
     !isBytecodePublic || isHiddenByScala || isBytecodeSynthetic || isClassInitializer ||
-    isScopedPrivateMixinForwarder ||
+    isScopedPrivateMixinForwarder || isScopedPrivateStaticForwarder ||
     (hasSyntheticName && !(isExtensionMethod || isDefaultGetter || isTraitInit))
   }
   def isScopedPrivate: Boolean = _scopedPrivate

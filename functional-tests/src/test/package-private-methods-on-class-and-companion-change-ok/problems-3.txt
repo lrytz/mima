@@ -1,3 +1,0 @@
-# I guess privateWithin isn't honoured in static method emission in Scala 3
-# https://github.com/lampepfl/dotty/issues/10842
-static method baz(Int)Int in class foo.Foo does not have a correspondent in new version
