@@ -1,0 +1,1 @@
+BinaryApi.keep[MethodBecomesUnreachableProblem]("foo.C.f(Int)Int")

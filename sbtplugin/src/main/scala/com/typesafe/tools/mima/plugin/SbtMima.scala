@@ -92,17 +92,28 @@ object SbtMima {
       for (p <- backErrors) doLog(" * " + p.description("current"))
       for (p <- forwErrors) doLog(" * " + p.description("other"))
 
-      val problems = backErrors ++ forwErrors
-      val keeps = problems.flatMap(_.howToKeep)
-      val allFilters = problems.filter(_.howToKeep.isEmpty).flatMap(_.howToFilter)
+      val (keepable, filterable) = (backErrors ++ forwErrors).map(p => p -> p.howToKeep).partition(_._2.isDefined)
+      val (toKeep, toFilter) = (keepable.map(_._1), filterable.map(_._1))
+      // a class and its companion object share a name, so their problems can give the same line
+      val keeps = keepable.flatMap(_._2).distinct
+      val allFilters = toFilter.flatMap(_.howToFilter).distinct
+      // each list comes last in its block, so that it is easy to copy
       if (keeps.nonEmpty) {
-        doLog("These are binary compatible, but after updating mimaPreviousArtifacts, later changes to them are no longer reported.")
-        doLog("To keep mima checking them, add to mimaBinaryApi, or to src/main/mima-filters/binary-api:")
-        for (k <- keeps) doLog("   " + k + ",")
+        doLog("Problems above that say a later change will no longer be reported do not break clients today.")
+        doLog("To keep mima checking those definitions after mimaPreviousArtifacts is updated, add the lines below to mimaBinaryApi, or to src/main/mima-filters/binary-api.")
         doLog("See https://github.com/scala-garden/mima#keeping-a-definition-checked")
+        if (toKeep.exists(_.matchSignature.nonEmpty))
+          doLog("Leaving out a signature (paramTypes)resultType keeps every overload of that name.")
+        for (k <- keeps) doLog("   " + k + ",")
       }
       if (allFilters.nonEmpty) {
-        doLog("Filter with:")
+        val files = Seq(
+          "backwards" -> backErrors,
+          "forwards" -> forwErrors,
+        ).collect { case (direction, errors) if errors.exists(toFilter.contains) => s"src/main/mima-filters/<version>.$direction.excludes" }
+        doLog(s"To accept the incompatible changes above, add the lines below to mimaBinaryIssueFilters, or to ${files.mkString(" or ")}.")
+        if (toFilter.exists(_.matchSignature.nonEmpty))
+          doLog("Leaving out a signature (paramTypes)resultType filters every overload of that name.")
         for (f <- allFilters) doLog("   " + f + ",")
       }
 

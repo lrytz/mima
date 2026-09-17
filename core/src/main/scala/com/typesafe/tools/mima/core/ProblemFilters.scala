@@ -1,15 +1,15 @@
 package com.typesafe.tools.mima.core
 
 import scala.reflect.{ ClassTag, classTag }
-import java.util.regex.Pattern
 
 object ProblemFilters {
 
   private case class ExcludeByName(name: String, cls: Class[_]) extends ProblemFilter {
-    private[this] val pattern = Pattern.compile(name.split("\\*", -1).map(Pattern.quote).mkString(".*"))
+    private[this] val pattern = new DefinitionPattern(name)
 
     override def apply(problem: Problem): Boolean = {
-      !(cls.isAssignableFrom(problem.getClass) && pattern.matcher(problem.matchName.getOrElse("")).matches)
+      !(cls.isAssignableFrom(problem.getClass) &&
+        pattern.matches(problem.matchName.getOrElse(""), problem.matchSignature))
     }
 
     override def toString() = s"""ExcludeByName[${cls.getSimpleName}]("$name")"""

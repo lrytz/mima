@@ -68,9 +68,9 @@ and run `mimaReportBinaryIssues` to see something like the following:
 [error] my-library: Failed binary compatibility check against com.example:my-library_3:1.0.0! Found 2 potential problems
 [error]  * method close()Unit in class com.example.Resource does not have a correspondent in current version
 [error]  * abstract method reset()Unit in trait com.example.Pool is present only in current version
-[error] Filter with:
-[error]    ProblemFilters.exclude[DirectMissingMethodProblem]("com.example.Resource.close"),
-[error]    ProblemFilters.exclude[ReversedMissingMethodProblem]("com.example.Pool.reset"),
+[error] To accept the incompatible changes above, add the lines below to mimaBinaryIssueFilters, or to src/main/mima-filters/<version>.backwards.excludes.
+[error]    ProblemFilters.exclude[DirectMissingMethodProblem]("com.example.Resource.close()Unit"),
+[error]    ProblemFilters.exclude[ReversedMissingMethodProblem]("com.example.Pool.reset()Unit"),
 ```
 
 Each problem comes with a filter to accept it, see
@@ -159,6 +159,14 @@ mimaBinaryIssueFilters ++= Seq(
   ProblemFilters.exclude[Problem]("com.example.mylibrary.internal.*"),
 )
 ```
+
+Names are the ones the report prints, signature included, so a filter covers one method:
+
+```scala
+ProblemFilters.exclude[DirectMissingMethodProblem]("com.example.mylibrary.Foo.bar(Int)Int")
+```
+
+Leaving the signature out covers every overload of `bar`.
 
 ### IncompatibleSignatureProblem
 
@@ -291,7 +299,7 @@ stays out of sight, and once `mimaPreviousArtifacts` moves to a new version, the
 `mimaBinaryApi` solves this problem:
 
 ```scala
-mimaBinaryApi += BinaryApi.keep[MethodBecomesUnreachableProblem]("foo.C.bar")
+mimaBinaryApi += BinaryApi.keep[MethodBecomesUnreachableProblem]("foo.C.bar(Int)Int")
 ```
 
 MiMa now checks `bar` as it checks a public method, and the message about narrowing is silenced.
@@ -300,12 +308,16 @@ The `keep` entry names the kind of problem MiMa continues checking:
 | entry | keeps |
 | --- | --- |
 | `keep[ClassBecomesUnreachableProblem]("foo.C")` | the type checked, with its members and its accessible nested classes |
-| `keep[MethodBecomesUnreachableProblem]("foo.C.bar")` | the method checked |
+| `keep[MethodBecomesUnreachableProblem]("foo.C.bar(Int)Int")` | the method checked |
 | `keep[HierarchyBecomesClosedProblem]("foo.T")` | an abstract method added to the type later reported |
 
-Names are printed in the report, `*` stands for any part of a name. An object has two classes
-(`O` and `O$`), so it takes two entries (same as with filters). Entries can also go in
-`src/main/mima-filters/binary-api`, one per line, `#` for comments.
+Names work as in filters, and `*` stands for any part of a name. An object has two classes,
+`O` and `O$`, so keeping it takes two entries; keeping a method of an object takes one. Entries
+can also go in `src/main/mima-filters/binary-api`, one per line, `#` for comments.
+
+A method entry includes the signature, so it keeps one method. Without it, the entry keeps every
+overload of that name, including any that was never part of the API, and removing one of those is
+then reported.
 
 A `keep` entry that is unused is reported as having no effect. It can either be a typo, or that the
 named definition is public again, or gone.
