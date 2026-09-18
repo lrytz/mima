@@ -6,7 +6,7 @@ MiMa (for "Migration Manager") is a tool for identifying [binary incompatibiliti
 
 It's pronounced _MEE-ma_.
 
-## What it is?
+## What it is
 
 MiMa compares the classfiles of two versions of a library. It reports changes that make
 code compiled against the old version fail with the new one, with a `LinkageError` such as
@@ -76,6 +76,9 @@ and run `mimaReportBinaryIssues` to see something like the following:
 Each problem comes with a filter to accept it, see
 [Filtering binary incompatibilities](#filtering-binary-incompatibilities).
 
+MiMa checks backward compatibility, that code compiled against the previous version keeps
+working. `mimaCheckDirection := "forward"` checks the other direction, `"both"` checks both.
+
 ### Mill
 
 A MiMa plugin for Mill is maintained at [lolgab/mill-mima](https://github.com/lolgab/mill-mima).
@@ -91,9 +94,7 @@ Please check [this page](https://github.com/lolgab/mill-mima) for further inform
 
 ### CLI
 
-You can use MiMa using its command-line interface - it's the most straightforward way to compare two jars and see some human-readable descriptions of the issues.
-
-You can launch it with Coursier:
+The command-line interface compares two jars directly. Launch it with Coursier:
 
 ```bash
 cs launch com.typesafe:mima-cli_3:latest.release -- old.jar new.jar
@@ -140,9 +141,8 @@ Options:
 
 ## Filtering binary incompatibilities
 
-When MiMa reports a binary incompatibility that you consider acceptable, such as a change in an internal package,
-you need to use the `mimaBinaryIssueFilters` setting to filter it out and get `mimaReportBinaryIssues` to
-pass, like so:
+A problem you accept, such as a change in an internal package, goes in
+`mimaBinaryIssueFilters`:
 
 ```scala
 import com.typesafe.tools.mima.core._
@@ -152,12 +152,10 @@ mimaBinaryIssueFilters ++= Seq(
 )
 ```
 
-You may also use wildcards in the package and/or the top `Problem` parent type for such situations:
+`*` stands for any part of a name, and `Problem` for any kind of problem:
 
 ```scala
-mimaBinaryIssueFilters ++= Seq(
-  ProblemFilters.exclude[Problem]("com.example.mylibrary.internal.*"),
-)
+mimaBinaryIssueFilters += ProblemFilters.exclude[Problem]("com.example.mylibrary.internal.*")
 ```
 
 Names are the ones the report prints, signature included, so a filter covers one method:
@@ -167,6 +165,16 @@ ProblemFilters.exclude[DirectMissingMethodProblem]("com.example.mylibrary.Foo.ba
 ```
 
 Leaving the signature out covers every overload of `bar`.
+
+### Filter files
+
+Filters can live in `src/main/mima-filters` instead of the build, one `exclude` per line,
+`#` for comments. A file is named after the release its filters are for:
+`1.1.0.backwards.excludes` applies while `mimaPreviousArtifacts` names 1.1.0 or anything
+before it, and is ignored once it moves past. `forwards` and `both` name the other
+directions, and `1.1.x` stands for every patch release of 1.1.
+
+A line pasted from the report, trailing comma and all, is accepted.
 
 ### IncompatibleSignatureProblem
 
@@ -341,10 +349,10 @@ definition entirely, with no report.
 
 On Scala 2, this works for classes and objects only, not for methods and vals.
 
-## Setting different mimaPreviousArtifacts
+## More on mimaPreviousArtifacts
 
-`mimaPreviousArtifacts` can depend on other settings. For example, a cross-built project
-with no Scala 3 release yet has nothing to compare its Scala 3 build against:
+It can depend on other settings. For example, a cross-built project with no Scala 3
+release yet has nothing to compare its Scala 3 build against:
 
 ```scala
 mimaPreviousArtifacts := {
@@ -353,28 +361,17 @@ mimaPreviousArtifacts := {
 }
 ```
 
-## Make mimaReportBinaryIssues not fail
-
-The setting `mimaFailOnNoPrevious` defaults to `true` and will make
-`mimaReportBinaryIssues` fail if `mimaPreviousArtifacts` hasn't been set.
-
-To make `mimaReportBinaryIssues` not fail you may want to do one of the following:
-
-* set `mimaPreviousArtifacts` on all the projects that should be checking their binary compatibility
-* avoid calling `mimaReportBinaryIssues` when binary compatibility checking isn't needed
-* set `mimaFailOnNoPrevious := false` on specific projects that want to opt-out (alternatively `disablePlugins(MimaPlugin)`)
-* set `ThisBuild / mimaFailOnNoPrevious := false`, which disables it build-wide
-
-## Setting mimaPreviousArtifacts when name contains a "."
-
-To refer to the project name in `mimaPreviousArtifacts`, use `moduleName` rather
-than `name`, like
+To name the project itself, use `moduleName`, not `name`: it escapes characters like `.`,
+and is the name `publish` uses, so it is also what your users depend on.
 
 ```scala
 mimaPreviousArtifacts := Set(organization.value %% moduleName.value % "0.1.0")
 ```
 
-Unlike `name`, `moduleName` escapes characters like `.`, and is the name
-actually used by `publish` and `publishLocal` to publish your project. It's
-also the value your users should use when adding your project to their
-dependencies.
+## Not failing the build
+
+`mimaReportBinaryIssues` fails on a problem, and also when `mimaPreviousArtifacts` is
+empty, so that a project does not go unchecked by accident. To report problems without
+failing, set `mimaFailOnProblem := false`. For a project with nothing to compare against,
+set `mimaFailOnNoPrevious := false`, or `disablePlugins(MimaPlugin)`. Setting it on
+`ThisBuild` does that for the whole build.
