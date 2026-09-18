@@ -1,1 +1,1 @@
-BinaryApi.keep[MethodBecomesUnreachableProblem]("foo.C.f(Int)Int")
+BinaryApi.keep[MethodNoLongerCheckedProblem]("foo.C.f(Int)Int")

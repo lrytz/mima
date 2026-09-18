@@ -18,7 +18,7 @@ private[analyze] object MethodChecker {
     if (oldclazz.isClosedHierarchy) return Nil
     // a client that implemented oldclazz while it was open is still out there, and from here on
     // these checks no longer run: the abstract method a later version adds would go unreported
-    val closing = if (newclazz.isClosedHierarchy) List(HierarchyBecomesClosedProblem(oldclazz)) else Nil
+    val closing = if (newclazz.isClosedHierarchy) List(HierarchyNoLongerCheckedProblem(oldclazz)) else Nil
     closing :::
       checkDeferredMethodsProblems(oldclazz, newclazz, excludeAnnots) :::
       checkInheritedNewAbstractMethodProblems(oldclazz, newclazz, excludeAnnots)
@@ -67,7 +67,7 @@ private[analyze] object MethodChecker {
     // last, so that dropping it for a forward check cannot hide another problem about the method;
     // the ref is oldmeth, the only one a filter on Problem.isExternallyAccessible keeps
     else if (newmeth.isHiddenByScala)
-      Some(MethodBecomesUnreachableProblem(oldmeth, newmeth))
+      Some(MethodNoLongerCheckedProblem(oldmeth, newmeth))
     else
       None
   }
