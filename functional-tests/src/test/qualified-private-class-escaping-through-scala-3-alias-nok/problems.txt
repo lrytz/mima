@@ -1,3 +1,3 @@
-method bar(Int)Int in private[..] class foo.C does not have a correspondent in new version
-method bar(Int)Int in private[..] class foo.D does not have a correspondent in new version
-method bar(Int)Int in private[..] class foo.E does not have a correspondent in new version
+method bar(Int)Int in private[..] class foo.C does not have a correspondent in new version (foo.C escapes as an alias in object foo.Lib)
+method bar(Int)Int in private[..] class foo.D does not have a correspondent in new version (foo.D escapes as an alias in object foo.Lib)
+method bar(Int)Int in private[..] class foo.E does not have a correspondent in new version (foo.E escapes as an alias in object foo.Lib)

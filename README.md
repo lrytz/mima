@@ -247,8 +247,14 @@ object Lib { def go: C = new C }
 ```
 
 `C` escapes through `Lib.go`, so a client can write `Lib.go.bar(1)`, and changing
-`bar` breaks it. MiMa reports changes to `C` and to its public members. A
-qualified-private class that never reaches a public signature is ignored.
+`bar` breaks it. MiMa reports changes to `C` and to its public members, and every report
+says how the class escapes, since the class alone does not show it:
+
+```
+method bar(Int)Int in private[..] class foo.C does not have a correspondent in new version (foo.C escapes through foo.Lib.go)
+```
+
+A qualified-private class that never reaches a public signature is ignored.
 
 Losing that last escape route is reported, as `ClassNoLongerCheckedProblem`:
 dropping `Lib.go`, or narrowing a public class to `private[foo]` in the first place,
