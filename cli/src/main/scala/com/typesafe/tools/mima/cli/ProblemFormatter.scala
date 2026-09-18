@@ -55,6 +55,9 @@ case class ProblemFormatter(
     s"$pkg/$clsName.$memberName$sig"
   }
 
+  /** Whether the chosen options print this problem. */
+  def shows(problem: Problem): Boolean = formatProblem(problem).isDefined
+
   // format: off
   def formatProblem(problem: Problem): Option[String] = problem match {
     case prob: IncompatibleClassSignatureProblem =>

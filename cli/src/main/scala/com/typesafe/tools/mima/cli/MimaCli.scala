@@ -1,5 +1,6 @@
 package com.typesafe.tools.mima.cli
 
+import com.typesafe.tools.mima.core.ProblemSuggestions
 import com.typesafe.tools.mima.lib.MiMaLib
 
 import java.io.File
@@ -9,7 +10,8 @@ case class Main(
     classpath: Seq[File] = Nil,
     oldBinOpt: Option[File] = None,
     newBinOpt: Option[File] = None,
-    formatter: ProblemFormatter = ProblemFormatter()
+    formatter: ProblemFormatter = ProblemFormatter(),
+    showSuggestions: Boolean = false
 ) {
 
   def run(): Int = {
@@ -23,10 +25,11 @@ case class Main(
       throw new IllegalArgumentException(s"oldfile does not exist: $oldBin")
     if (!newBin.exists())
       throw new IllegalArgumentException(s"newfile does not exist: $newBin")
-    val problems = new MiMaLib(classpath)
-      .collectProblems(oldBin, newBin, Nil)
-      .flatMap(formatter.formatProblem)
-    problems.foreach(println)
+    val found    = new MiMaLib(classpath).collectProblems(oldBin, newBin, Nil)
+    val problems = found.filter(formatter.shows)
+    problems.flatMap(formatter.formatProblem).foreach(println)
+    if (showSuggestions)
+      ProblemSuggestions.lines(problems, Nil).foreach(println)
     problems.size
   }
 
@@ -74,6 +77,9 @@ object Main {
       |  -j, --bytecode-names:
       |    Show bytecode names of fields and methods, rather than human-readable names
       |
+      |  -s, --suggestions:
+      |    Print the lines to add to a build to accept the problems
+      |
       |Exit code: 0 if no problems were found, 1 if there were, 2 for a usage error.
       |""".stripMargin
   )
@@ -89,6 +95,9 @@ object Main {
             cpStr.split(File.pathSeparatorChar).toSeq.map(new File(_))
           )
         )
+
+      case ("-s" | "--suggestions") :: rest =>
+        parseArgs(rest, current.copy(showSuggestions = true))
 
       case ("-f" | "--forward-only") :: rest =>
         parseArgs(
