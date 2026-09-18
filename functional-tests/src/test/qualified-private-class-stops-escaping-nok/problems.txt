@@ -1,1 +1,1 @@
-private[..] class foo.C is not part of the API in new version, so a later change to it will no longer be reported, though it would break clients using it today
+private[..] class foo.C is not part of the API in new version, so a later change to it will no longer be reported, though it would break clients using it today (foo.C escaped as an alias in object foo.O)

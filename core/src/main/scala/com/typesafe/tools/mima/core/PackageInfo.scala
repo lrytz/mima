@@ -98,35 +98,47 @@ sealed abstract class PackageInfo {
    *  reaches the public members and nested classes of that class in turn, so this is a
    *  fixed point.
    */
-  final lazy val escapedClasses: collection.Set[ClassInfo] = {
+  final def escapedClasses: collection.Set[ClassInfo] = escapeRoutes.keySet
+
+  /** The classes no client can name but every client can reach, each with the way out it takes:
+   *  a public signature, a parent, an alias, or an outer class a client can name. */
+  final lazy val escapeRoutes: collection.Map[ClassInfo, String] = {
     // Signatures resolve against the full classpath. Map them back to the compared artifact
     // before asking about accessibility, which loads the classfile and its Scala metadata.
     val targetClasses = classesInTree.toList
     val targetByName  = targetClasses.iterator.map(c => c.fullName -> c).toMap
-    val escaped       = mutable.Set.empty[ClassInfo]
+    val escaped       = mutable.Map.empty[ClassInfo, String]
     val queue         = mutable.Queue.empty[ClassInfo]
 
-    def enqueue(clazz: ClassInfo): Unit = if (clazz != NoClass) {
+    def enqueue(clazz: ClassInfo, route: => String): Unit = if (clazz != NoClass) {
       targetByName.get(clazz.fullName).foreach { target =>
-        if (!target.isExternallyAccessible && escaped.add(target)) queue.enqueue(target)
+        if (!target.isExternallyAccessible && !escaped.contains(target)) {
+          escaped(target) = route
+          queue.enqueue(target)
+        }
       }
     }
-    def enqueueAll(classes: Iterator[ClassInfo]): Unit =
-      classes.foreach(enqueue)
+    def enqueueAll(classes: Iterator[ClassInfo], route: => String): Unit =
+      classes.foreach(enqueue(_, route))
 
     def exposes(clazz: ClassInfo): Unit = {
       (clazz.methods.value.iterator ++ clazz.fields.value.iterator).foreach { m =>
         if (!m.nonAccessible) {
-          enqueueAll(m.tpe.classes)
-          enqueueAll(m.signature.classNames.map(clazz.owner.definitions.fromName))
+          enqueueAll(m.tpe.classes, s"through ${m.fullName}")
+          enqueueAll(m.signature.classNames.map(clazz.owner.definitions.fromName), s"through ${m.fullName}")
         }
       }
-      enqueueAll(clazz.signature.classNames.map(clazz.owner.definitions.fromName))
-      enqueueAll(clazz.aliases.iterator.map(clazz.owner.definitions.fromAliasName))
-      enqueue(clazz.superClass)
-      enqueueAll(clazz.interfaces.iterator)
+      enqueueAll(
+        clazz.signature.classNames.map(clazz.owner.definitions.fromName),
+        s"through the signature of ${clazz.description}")
+      enqueueAll(
+        clazz.aliases.iterator.map(clazz.owner.definitions.fromAliasName),
+        s"as an alias in ${clazz.description}")
+      enqueue(clazz.superClass, s"as a parent of ${clazz.description}")
+      enqueueAll(clazz.interfaces.iterator, s"as a parent of ${clazz.description}")
       // a client reaches a nested class through its outer only if it can name the nested one
-      clazz.innerClasses.foreach(clazz.owner.classes.get(_).filter(_.isDirectlyAccessible).foreach(enqueue))
+      clazz.innerClasses.foreach(clazz.owner.classes.get(_).filter(_.isDirectlyAccessible)
+        .foreach(enqueue(_, s"as a nested class of ${clazz.description}")))
     }
 
     targetClasses.foreach { c => if (c.isExternallyAccessible) exposes(c) }

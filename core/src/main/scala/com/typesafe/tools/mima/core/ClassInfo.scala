@@ -169,6 +169,9 @@ private[mima] sealed abstract class ClassInfo(val owner: PackageInfo) extends In
 
   /** Whether mima checks this class: a client outside the scope can name it, or holds
    *  one all the same because a public method returns it. */
+  /** The way out a client takes to reach this class, for one no client can name. */
+  private[mima] def escapeRoute: Option[String] = owner.root.escapeRoutes.get(this)
+
   private[mima] def isChecked: Boolean =
     isExternallyAccessible || owner.root.escapedClasses(this) || (isDirectlyAccessible && outer != NoClass && outer.isChecked)
 

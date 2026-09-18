@@ -33,6 +33,21 @@ sealed abstract class Problem extends ProblemRef {
     case _                => ""
   }
 
+  /** How a client reaches the class this problem is about, for one it cannot name. */
+  final def escapeNote: Option[String] = {
+    val clazz = this match {
+      case p: TemplateProblem => p.ref
+      case p: MemberProblem   => p.ref.owner
+    }
+    clazz.escapeRoute.map { route =>
+      val escapes = this match {
+        case _: StopsCheckingProblem => "escaped" // the way out is the one the old version had
+        case _                       => "escapes"
+      }
+      s"${clazz.formattedFullName} $escapes $route"
+    }
+  }
+
   /** Whether a client outside the library can name what this problem is about.
    *
    *  It is false for a definition that only Scala keeps private, such as
@@ -52,7 +67,10 @@ sealed abstract class Problem extends ProblemRef {
   /** 'affectedVersion' is "current" for bincompat, "other" or "previous" for forward-compat. */
   final def description: String => String = getDescription(_)
 
-  private def getDescription(affectedVersion: String): String = this match {
+  private def getDescription(affectedVersion: String): String =
+    describe(affectedVersion) + escapeNote.fold("")(note => s" ($note)")
+
+  private def describe(affectedVersion: String): String = this match {
     case MissingClassProblem(oldclazz)                    => s"${oldclazz.classString} does not have a correspondent in $affectedVersion version"
     case IncompatibleTemplateDefProblem(ref, newclazz)    => s"declaration of ${ref.description} is ${newclazz.description} in $affectedVersion version; changing ${ref.declarationPrefix} to ${newclazz.declarationPrefix} breaks client code"
     case InaccessibleClassProblem(ref)                    => s"${ref.classString} is inaccessible in $affectedVersion version, it must be public."

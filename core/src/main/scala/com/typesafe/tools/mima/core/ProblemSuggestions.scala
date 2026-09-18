@@ -10,8 +10,8 @@ private[mima] object ProblemSuggestions {
     val (keepable, filterable) = (backward ++ forward).map(p => p -> p.howToKeep).partition(_._2.isDefined)
     val (toKeep, toFilter)     = (keepable.map(_._1), filterable.map(_._1))
     // a class and its companion object share a name, so their problems can give the same line
-    val keeps   = keepable.flatMap(_._2).distinct
-    val filters = toFilter.flatMap(_.howToFilter).distinct
+    val keeps   = withNotes(keepable.flatMap { case (p, keep) => keep.map(p -> _) })
+    val filters = withNotes(toFilter.flatMap(p => p.howToFilter.map(p -> _)))
 
     val keepBlock =
       if (keeps.isEmpty) Nil
@@ -20,7 +20,7 @@ private[mima] object ProblemSuggestions {
           "Problems above that say a later change will no longer be reported do not break clients today.",
           "To keep mima checking those definitions after mimaPreviousArtifacts is updated, add the lines below to mimaBinaryApi, or to src/main/mima-filters/binary-api.",
           "See https://github.com/scala-garden/mima#keeping-a-definition-checked",
-        ) ++ signatureNote(toKeep, "keeps") ++ keeps.map("   " + _ + ",")
+        ) ++ signatureNote(toKeep, "keeps") ++ keeps
 
     val filterBlock =
       if (filters.isEmpty) Nil
@@ -32,10 +32,19 @@ private[mima] object ProblemSuggestions {
           }
         Seq(
           s"To accept the incompatible changes above, add the lines below to mimaBinaryIssueFilters, or to ${files.mkString(" or ")}.",
-        ) ++ signatureNote(toFilter, "filters") ++ filters.map("   " + _ + ",")
+        ) ++ signatureNote(toFilter, "filters") ++ filters
       }
 
     keepBlock ++ filterBlock
+  }
+
+  /** The lines to paste, each under a comment saying how a client reaches a class it cannot name. */
+  private def withNotes(suggestions: Seq[(Problem, String)]): Seq[String] = {
+    val lines = suggestions.map { case (p, line) => p.escapeNote -> s"   $line," }.distinct
+    lines.foldLeft((Option.empty[String], Vector.empty[String])) { case ((last, acc), (note, line)) =>
+      val comment = if (note == last) Nil else note.map("   # " + _).toList
+      (note, acc ++ comment :+ line)
+    }._2
   }
 
   private def signatureNote(problems: Seq[Problem], verb: String) =

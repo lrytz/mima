@@ -1,1 +1,1 @@
-the type hierarchy of class foo.C is different in new version. Missing types {foo.Base}
+the type hierarchy of class foo.C is different in new version. Missing types {foo.Base} (foo.C escapes through foo.Lib.go)
