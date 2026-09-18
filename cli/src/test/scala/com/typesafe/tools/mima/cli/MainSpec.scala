@@ -21,6 +21,10 @@ final class MainSpec extends munit.FunSuite {
     assert(ex.getMessage.contains("newfile does not exist"), ex.getMessage)
   }
 
+  test("wrong arguments exit with 2") {
+    assertEquals(Main.run(Array(missing.getPath, existingDir.getPath)), 2)
+  }
+
   test("existing but class-less paths are not an error (POM-only-style)") {
     val empty = Files.createTempDirectory("mima-cli-test").toFile
     try {

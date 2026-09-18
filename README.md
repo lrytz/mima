@@ -136,6 +136,11 @@ Options:
 
   -j, --bytecode-names:
     Show bytecode names of fields and methods, rather than human-readable names
+
+  -s, --suggestions:
+    Print the lines to add to a build to accept the problems
+
+Exit code: 0 if no problems were found, 1 if there were, 2 for a usage error.
 ```
 
 

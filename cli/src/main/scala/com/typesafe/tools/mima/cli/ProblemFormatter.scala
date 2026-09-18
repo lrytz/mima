@@ -30,21 +30,18 @@ case class ProblemFormatter(
     showDescriptions: Boolean = false
 ) {
 
-  private def str(problem: TemplateProblem): String =
-    s"${if (useBytecodeNames) problem.ref.bytecodeName
-      else problem.ref.fullName}: ${problem.getClass.getSimpleName.stripSuffix("Problem")}${description(problem)}"
+  private def str(problem: Problem): String =
+    s"${name(problem)}: ${problem.getClass.getSimpleName.stripSuffix("Problem")}${description(problem)}"
 
-  private def str(problem: MemberProblem): String =
-    s"${memberName(problem.ref)}: ${problem.getClass.getSimpleName.stripSuffix("Problem")}${description(problem)}"
+  /** The name a filter for the problem uses, so that a line can be pasted into one. */
+  private def name(problem: Problem): String = problem match {
+    case p: TemplateProblem if useBytecodeNames => p.ref.bytecodeName
+    case p: MemberProblem if useBytecodeNames   => bytecodeFullName(p.ref)
+    case p                                      => p.matchName.getOrElse("") + p.matchSignature
+  }
 
   private def description(problem: Problem): String =
     if (showDescriptions) ": " + problem.description("new") else ""
-
-  private def memberName(info: MemberInfo): String =
-    if (useBytecodeNames)
-      bytecodeFullName(info)
-    else
-      info.fullName
 
   private def bytecodeFullName(info: MemberInfo): String = {
     val pkg        = info.owner.owner.fullName.replace('.', '/')
@@ -57,6 +54,9 @@ case class ProblemFormatter(
 
     s"$pkg/$clsName.$memberName$sig"
   }
+
+  /** Whether the chosen options print this problem. */
+  def shows(problem: Problem): Boolean = formatProblem(problem).isDefined
 
   // format: off
   def formatProblem(problem: Problem): Option[String] = problem match {
