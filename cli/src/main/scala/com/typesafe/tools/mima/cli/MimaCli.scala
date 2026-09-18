@@ -34,12 +34,16 @@ case class Main(
 
 object Main {
 
-  def main(args: Array[String]): Unit =
-    try System.exit(parseArgs(args.toList, Main()).run())
+  def main(args: Array[String]): Unit = System.exit(run(args))
+
+  /** 0 when the versions are compatible, 1 when they are not, 2 when the arguments are wrong. */
+  def run(args: Array[String]): Int =
+    try if (parseArgs(args.toList, Main()).run() == 0) 0 else 1
     catch {
       case err: IllegalArgumentException =>
         println(err.getMessage())
         printUsage()
+        2
     }
 
   def printUsage(): Unit = println(
@@ -70,6 +74,7 @@ object Main {
       |  -j, --bytecode-names:
       |    Show bytecode names of fields and methods, rather than human-readable names
       |
+      |Exit code: 0 if no problems were found, 1 if there were, 2 for a usage error.
       |""".stripMargin
   )
 
