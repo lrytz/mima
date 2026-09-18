@@ -1,1 +1,1 @@
-ProblemFilters.exclude[MissingMethodProblem]("A.foz")
+ProblemFilters.exclude[MissingMethodProblem]("A.foz()Int")

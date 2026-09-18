@@ -1,0 +1,1 @@
+ProblemFilters.exclude[DirectMissingMethodProblem]("A.f(java.lang.String)java.lang.String")

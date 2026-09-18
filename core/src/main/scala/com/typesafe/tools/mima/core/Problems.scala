@@ -5,9 +5,12 @@ trait ProblemRef {
   /** The name to use to filter out the problem. */
   def matchName: Option[String] = None
 
+  /** The signature of the definition the problem is about, empty unless it is a method. */
+  def matchSignature: String = ""
+
   /** The code snippet to use to filter out the problem. */
   def howToFilter: Option[String] =
-    matchName.map(name => s"""ProblemFilters.exclude[${getClass.getSimpleName}]("$name")""")
+    matchName.map(name => s"""ProblemFilters.exclude[${getClass.getSimpleName}]("$name$matchSignature")""")
 }
 
 /** Base trait for reports that mima will no longer check a definition. These are not actual breaks between
@@ -25,6 +28,11 @@ sealed abstract class Problem extends ProblemRef {
     case p: MemberProblem   => Some(p.ref.fullName)
   }
 
+  final override def matchSignature: String = this match {
+    case p: MemberProblem => p.ref match { case m: MethodInfo => m.tpe.toString; case _ => "" }
+    case _                => ""
+  }
+
   /** Whether a client outside the library can name what this problem is about.
    *
    *  It is false for a definition that only Scala keeps private, such as
@@ -37,7 +45,7 @@ sealed abstract class Problem extends ProblemRef {
 
   /** The entry to add to `mimaBinaryApi` to keep mima checking the definition. */
   final def howToKeep: Option[String] = this match {
-    case _: StopsCheckingProblem => matchName.map(name => s"""BinaryApi.keep[${getClass.getSimpleName}]("$name")""")
+    case _: StopsCheckingProblem => matchName.map(name => s"""BinaryApi.keep[${getClass.getSimpleName}]("$name$matchSignature")""")
     case _                       => None
   }
 

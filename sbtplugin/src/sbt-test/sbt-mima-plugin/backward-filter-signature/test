@@ -1,0 +1,13 @@
+> set Compile / scalaSource := baseDirectory.value /"src" /"main" /"scala" /"v1"
+> set version := s"0.0.1-SNAPSHOT"
+> publishLocal
+
+> set Compile / scalaSource := baseDirectory.value /"src" /"main" /"scala" /"v2"
+> set version := s"0.0.2-SNAPSHOT"
+
+# the filter file names the signature of the overload that went, so the check passes
+> mimaReportBinaryIssues
+
+# left with the filter naming the other overload, which matches nothing
+> set mimaBackwardIssueFilters := Map.empty
+-> mimaReportBinaryIssues

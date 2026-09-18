@@ -114,7 +114,7 @@ private[mima] final class MethodInfo(owner: ClassInfo, bytecodeName: String, fla
   def isHiddenByScala: Boolean =
     (isScopedPrivate || isPrivate) && !annotations.contains(MethodInfo.PublicInBinary) && !keptBinaryApi
 
-  private def keptBinaryApi: Boolean = owner.owner.root.binaryApi.keepsMethod(fullName)
+  private def keptBinaryApi: Boolean = owner.owner.root.binaryApi.keepsMethod(fullName, tpe.toString)
 
   def nonAccessible: Boolean = {
     !isBytecodePublic || isHiddenByScala || isBytecodeSynthetic || isClassInitializer ||

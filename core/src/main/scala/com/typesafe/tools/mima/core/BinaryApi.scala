@@ -1,16 +1,14 @@
 package com.typesafe.tools.mima.core
 
-import java.util.regex.Pattern
-
 import scala.collection.mutable
 import scala.reflect.{ ClassTag, classTag }
 
 /** A definition mima keeps checking though the source no longer makes it part of the API. */
 final class BinaryApiEntry private[core] (private[core] val problem: Class[_], val name: String) {
-  private[core] val pattern = Pattern.compile(name.split("\\*", -1).map(Pattern.quote).mkString(".*"))
+  private[core] val pattern = new DefinitionPattern(name)
 
-  private[core] def keeps(problem: Class[_], definition: String): Boolean =
-    this.problem == problem && pattern.matcher(definition).matches
+  private[core] def keeps(problem: Class[_], definition: String, signature: String): Boolean =
+    this.problem == problem && pattern.matches(definition, signature)
 
   override def toString = s"""BinaryApi.keep[${problem.getSimpleName}]("$name")"""
 }
@@ -47,12 +45,14 @@ object BinaryApi {
 private[mima] final class BinaryApiSpec(val entries: Seq[BinaryApiEntry]) {
   private val used = mutable.Set.empty[BinaryApiEntry]
 
-  private def keeps(problem: Class[_], definition: String) =
-    entries.exists(e => e.keeps(problem, definition) && { used += e; true })
+  private def keeps(problem: Class[_], definition: String, signature: String = "") =
+    entries.exists(e => e.keeps(problem, definition, signature) && { used += e; true })
 
-  def keepsClass(definition: String): Boolean      = keeps(classOf[ClassBecomesUnreachableProblem], definition)
-  def keepsMethod(definition: String): Boolean     = keeps(classOf[MethodBecomesUnreachableProblem], definition)
-  def keepsExtensible(definition: String): Boolean = keeps(classOf[HierarchyBecomesClosedProblem], definition)
+  def keepsClass(name: String): Boolean      = keeps(classOf[ClassBecomesUnreachableProblem], name)
+  def keepsExtensible(name: String): Boolean = keeps(classOf[HierarchyBecomesClosedProblem], name)
+
+  def keepsMethod(name: String, signature: String): Boolean =
+    keeps(classOf[MethodBecomesUnreachableProblem], name, signature)
 
   /** Entries no definition needed: a typo, or the definition is public again, or gone. */
   def unused: Seq[BinaryApiEntry] = entries.filterNot(used.contains)
