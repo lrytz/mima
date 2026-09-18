@@ -128,14 +128,15 @@ sealed abstract class PackageInfo {
           enqueueAll(m.signature.classNames.map(clazz.owner.definitions.fromName), s"through ${m.fullName}")
         }
       }
+      // parents first: a parent with type arguments is in the signature too, and reads better as one
+      enqueue(clazz.superClass, s"as a parent of ${clazz.description}")
+      enqueueAll(clazz.interfaces.iterator, s"as a parent of ${clazz.description}")
       enqueueAll(
         clazz.signature.classNames.map(clazz.owner.definitions.fromName),
         s"through the signature of ${clazz.description}")
       enqueueAll(
         clazz.aliases.iterator.map(clazz.owner.definitions.fromAliasName),
         s"as an alias in ${clazz.description}")
-      enqueue(clazz.superClass, s"as a parent of ${clazz.description}")
-      enqueueAll(clazz.interfaces.iterator, s"as a parent of ${clazz.description}")
       // a client reaches a nested class through its outer only if it can name the nested one
       clazz.innerClasses.foreach(clazz.owner.classes.get(_).filter(_.isDirectlyAccessible)
         .foreach(enqueue(_, s"as a nested class of ${clazz.description}")))
